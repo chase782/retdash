@@ -506,7 +506,744 @@ function cohortCard(c){
     '<div style="background:rgba(77,143,255,.07);border:1px solid rgba(77,143,255,.2);border-radius:6px;padding:10px 12px">'+
       '<div style="font-size:9px;color:#4d8fff;text-transform:uppercase;letter-spacing:.8px;font-family:DM Mono,monospace;margin-bottom:3px">Projected Commission</div>'+
       '<div style="font-family:Barlow Condensed,sans-serif;font-size:26px;font-weight:700">'+fmtM(comm)+'</div>'+
-      '<div style="font-size:9px;color:#4a5a72;margin-top:3px;font-family:DM Mono,monospace">'+proj.toLocaleString()+' proj. files &times; $'+cpf.toLocaleString()+'/file avg</div>'+
+      '<div style="font-size:9px;color:#4a5a72;margin-top:3px;font-family:DM Mono,monospace">'+proj.toLocaleString()+' proj. files &times; +
+    '</div>';
+  } else {
+    var rc=retColor(c.cur_ret);
+    var bp=Math.max(0,Math.min(100,(c.cur_ret-60)/40*100));
+    var adj=c.cur_adj;
+    var adjC=adj>0?'#00d48a':adj>=-2.5?'#f59e0b':'#ff3d5a';
+    body='<div style="font-family:Barlow Condensed,sans-serif;font-size:40px;font-weight:800;color:'+rc+';line-height:1">'+c.cur_ret.toFixed(1)+'%</div>'+
+      '<div style="height:4px;background:#1c2535;border-radius:2px;margin:8px 0 4px;overflow:hidden"><div style="width:'+bp+'%;height:100%;background:'+rc+'"></div></div>'+
+      '<div style="font-size:9px;color:#4a5a72;text-align:right;font-family:DM Mono,monospace;margin-bottom:8px">'+fmtM(c.est_commission)+' est. comm</div>'+
+      '<div style="display:flex;gap:8px;padding-top:8px;border-top:1px solid #1e2d42">'+
+        '<div style="flex:1"><div style="font-size:9px;color:#4a5a72;text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px">Files</div><div style="font-family:DM Mono,monospace;font-size:12px;font-weight:600">'+c.payable_files.toLocaleString()+'</div></div>'+
+        '<div style="flex:1"><div style="font-size:9px;color:#4a5a72;text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px">Passed</div><div style="font-family:DM Mono,monospace;font-size:12px;font-weight:600;color:#00d48a">'+c.passes.toLocaleString()+'</div></div>'+
+        '<div style="flex:1"><div style="font-size:9px;color:#4a5a72;text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px">Failed</div><div style="font-family:DM Mono,monospace;font-size:12px;font-weight:600;color:#ff3d5a">'+c.fails.toLocaleString()+'</div></div>'+
+        '<div style="flex:1"><div style="font-size:9px;color:#4a5a72;text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px">Adj</div><div style="font-family:DM Mono,monospace;font-size:12px;font-weight:600;color:'+adjC+'">'+(adj>=0?'+':'')+adj+'%</div></div>'+
+      '</div>';
+  }
+  return '<div class="cohort-card" style="border:1px solid '+borderC+';border-top:2px solid '+topC+'">'+
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'+
+      '<div>'+
+        '<div style="font-family:Barlow Condensed,sans-serif;font-size:17px;font-weight:700">'+c.month_label+'</div>'+
+        '<div style="margin-top:4px">'+statusBadge+'</div>'+
+      '</div>'+
+      '<span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:3px;background:'+lobC+';color:'+lobTc+'">'+lob+'</span>'+
+    '</div>'+
+    body+
+    '<div style="font-size:9px;color:#4a5a72;margin-top:8px;padding-top:7px;border-top:1px solid #1e2d42;font-family:DM Mono,monospace">'+c.source+'</div>'+
+  '</div>';
+}
+
+function renderForecast(cohorts,rate,elId,cpf,histRate){
+  var el=document.getElementById(elId);
+  if(!el)return;
+  el.innerHTML=cohorts.map(function(c){
+    var early=c.incomplete&&c.fails===0&&c.cur_ret>90;
+    if(early){
+      var dE=16,dR=15;
+      var proj=c.passes+Math.round(c.passes/dE*dR);
+      var comm=proj*avgDebt*rate;
+      return '<div class="fc-row" style="border-left:2px solid #22d3ee;padding-left:10px">'+
+        '<div>'+
+          '<div class="fc-month">'+c.month_label+' <span style="font-size:9px;color:#22d3ee">&#9679; IN PROGRESS</span></div>'+
+          '<div class="fc-sub">'+c.passes.toLocaleString()+' cleared &divide; '+dE+'d = '+(c.passes/dE).toFixed(1)+'/day &times; '+dR+'d remaining</div>'+
+          '<div class="fc-sub" style="color:#4a5a72">'+proj.toLocaleString()+' proj. files &times; '</div>'+
+        '</div>'+
+        '<div class="fc-vals">'+
+          '<div class="fc-ret" style="color:#22d3ee;font-size:13px">N/A</div>'+
+          '<div class="fc-comm">'+fmtM(comm)+'</div>'+
+        '</div>'+
+      '</div>';
+    }
+    var rc=retColor(c.cur_ret);
+    var tiers=[{r:85,l:'+5% Bonus',c:'#00d48a'},{r:82.5,l:'+2.5% Bonus',c:'#6ee7b7'},{r:80,l:'0% Neutral',c:'#8a9bb5'},{r:77.5,l:'-2.5%',c:'#f59e0b'},{r:70,l:'-5%',c:'#fb923c'},{r:65,l:'-10%',c:'#ff3d5a'},{r:0,l:'-12%',c:'#f43f5e'}];
+    var next=tiers.find(function(t){return c.cur_ret<t.r;});
+    var nextStr=next?'<span style="color:'+next.c+';font-size:10px">'+(next.r-c.cur_ret).toFixed(1)+'% to '+next.l+'</span>':'<span style="color:#00d48a;font-size:10px">&#10003; In bonus tier</span>';
+    return '<div class="fc-row">'+
+      '<div>'+
+        '<div class="fc-month">'+c.month_label+' '+(c.window_closed?'<span style="font-size:9px;color:#00d48a">&#10003; FINAL</span>':'<span style="font-size:9px;color:#4d8fff">&#9679; OPEN</span>')+'</div>'+
+        '<div class="fc-sub">'+c.payable_files.toLocaleString()+' files &middot; '+(c.window_closed?'closed':c.days_left+'d left')+'</div>'+
+      '</div>'+
+      '<div class="fc-vals">'+
+        '<div class="fc-ret" style="color:'+rc+'">'+c.cur_ret.toFixed(1)+'%</div>'+
+        '<div class="fc-comm">'+fmtM(c.est_commission)+' '+nextStr+'</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+// ===== CHART =====
+var _chart=null;
+function renderChart(){
+  var ctx=document.getElementById('monthlyChart');
+  if(!ctx)return;
+  if(_chart)_chart.destroy();
+  var months=[...new Set(MONTHLY.map(function(m){return m.month_label;}))];
+  var glgD=months.map(function(ml){var r=MONTHLY.find(function(m){return m.month_label===ml&&m.lob==='GUARDIAN';});return r?r.files:0;});
+  var alvD=months.map(function(ml){var r=MONTHLY.find(function(m){return m.month_label===ml&&m.lob==='ALLEVIATE';});return r?r.files:0;});
+  _chart=new Chart(ctx,{type:'bar',data:{labels:months.map(function(m){return m.replace(' 20',"'");}),datasets:[{label:'Guardian',data:glgD,backgroundColor:'rgba(77,143,255,.7)',borderRadius:3},{label:'Alleviate',data:alvD,backgroundColor:'rgba(0,212,138,.65)',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c2535',borderColor:'#243447',borderWidth:1,titleColor:'#e8edf5',bodyColor:'#8a9bb5'}},scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#4a5a72',font:{size:10}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#4a5a72',font:{size:10}}}}}});
+}
+
+// ===== REPS =====
+function fReps(){
+  var q=document.getElementById('repQ').value.toLowerCase();
+  var lob=document.getElementById('repLob').value;
+  var team=document.getElementById('repTeam').value;
+  var sort=document.getElementById('repSort').value;
+  var d=REPS.filter(function(r){
+    if(q&&!r.rep.toLowerCase().includes(q))return false;
+    if(lob==='GUARDIAN'&&!r.guardian_files)return false;
+    if(lob==='ALLEVIATE'&&!r.alleviate_files)return false;
+    if(team!=='ALL'&&REP_TEAM[r.rep]!==team)return false;
+    return true;
+  });
+  if(sort==='worst')d.sort(function(a,b){return a.overall_ret-b.overall_ret;});
+  else if(sort==='best')d.sort(function(a,b){return b.overall_ret-a.overall_ret;});
+  else if(sort==='files')d.sort(function(a,b){return b.total_files-a.total_files;});
+  else if(sort==='commission')d.sort(function(a,b){return b.commission-a.commission;});
+  else d.sort(function(a,b){return a.rep.localeCompare(b.rep);});
+  return d;
+}
+function renderReps(){
+  var d=fReps(),st=rpg*RPG,sl=d.slice(st,st+RPG);
+  document.getElementById('repCount').textContent=d.length.toLocaleString()+' reps';
+  document.getElementById('repPgInfo').textContent=(st+1)+'-'+Math.min(st+RPG,d.length)+' of '+d.length;
+  document.getElementById('repPrev').disabled=rpg===0;
+  document.getElementById('repNext').disabled=st+RPG>=d.length;
+  document.getElementById('repBody').innerHTML=sl.map(function(r){
+    var rc=retColor(r.overall_ret);
+    var bw=Math.max(0,Math.min(100,(r.overall_ret-60)/40*100));
+    var team=REP_TEAM[r.rep]||'Unassigned';
+    var adjC=r.overall_adj>0?'#00d48a':r.overall_adj>=-2.5?'#f59e0b':'#ff3d5a';
+    return '<tr>'+
+      '<td style="font-weight:600;white-space:nowrap">'+r.rep+'</td>'+
+      '<td style="font-size:10px;color:#8a9bb5">'+team+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+r.total_files+'</td>'+
+      '<td style="font-family:DM Mono,monospace;color:#00d48a">'+r.total_passes+'</td>'+
+      '<td style="font-family:DM Mono,monospace;color:#ff3d5a">'+r.total_fails+'</td>'+
+      '<td><div style="display:flex;align-items:center;gap:8px"><span style="font-family:DM Mono,monospace;color:'+rc+';font-weight:600;width:46px">'+fmtPct(r.overall_ret)+'</span><div style="flex:1;height:5px;background:#1c2535;border-radius:3px;min-width:60px"><div style="width:'+bw+'%;height:100%;background:'+rc+';border-radius:3px"></div></div></div></td>'+
+      '<td style="font-family:DM Mono,monospace;color:'+adjC+'">'+(r.overall_adj>=0?'+':'')+r.overall_adj+'%</td>'+
+      '<td style="font-family:DM Mono,monospace;color:'+(r.guardian_ret!=null?retColor(r.guardian_ret):'#4a5a72')+'">'+(r.guardian_ret!=null?fmtPct(r.guardian_ret):'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace;color:'+(r.alleviate_ret!=null?retColor(r.alleviate_ret):'#4a5a72')+'">'+(r.alleviate_ret!=null?fmtPct(r.alleviate_ret):'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-weight:600">'+fmtM(r.commission)+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+// ===== AT-RISK =====
+function fRisk(){
+  var q=document.getElementById('riskQ').value.toLowerCase();
+  var lob=document.getElementById('riskLob').value;
+  var lbm=document.getElementById('riskLBMonth').value;
+  var team=document.getElementById('riskTeam').value;
+  var rank=document.getElementById('riskRank').value;
+  var sort=document.getElementById('riskSort').value;
+  var d=_AR.filter(function(r){
+    if(lob!=='ALL'&&r.lob!==lob)return false;
+    if(lbm!=='ALL'&&r.cohort_month!==lbm)return false;
+    if(team!=='ALL'&&REP_TEAM[r.rep]!==team)return false;
+    var g=calcRank(r.score);
+    if(rank!=='ALL'){
+      var fMap={'A+':['A+'],'A':['A'],'A-':['A-'],'B+':['B+'],'B':['B'],'B-':['B-'],'C+':['C+'],'C':['C'],'C-':['C-'],'D+':['D+','D','D-','F+','F','F-'],'F':['F+','F','F-']};
+      if(fMap[rank]&&!fMap[rank].includes(g))return false;
+    }
+    if(q){
+      var digits=q.replace(/[^0-9]/g,'');
+      if(digits.length>=4&&r.phone&&r.phone.replace(/[^0-9]/g,'').includes(digits))return true;
+      return r.name.toLowerCase().includes(q)||r.rep.toLowerCase().includes(q);
+    }
+    return true;
+  });
+  if(sort==='score_desc')d.sort(function(a,b){return b.score-a.score;});
+  else if(sort==='score_asc')d.sort(function(a,b){return a.score-b.score;});
+  else if(sort==='pmts')d.sort(function(a,b){return a.needed-b.needed;});
+  else if(sort==='debt')d.sort(function(a,b){return b.debt-a.debt;});
+  else d.sort(function(a,b){return(b.fp_cleared||'').localeCompare(a.fp_cleared||'');});
+  return d;
+}
+function renderRisk(){
+  var d=fRisk(),st=rkpg*RKPG,sl=d.slice(st,st+RKPG);
+  document.getElementById('riskCount').innerHTML=d.length.toLocaleString()+' clients';
+  document.getElementById('riskPgInfo').textContent=(st+1)+'-'+Math.min(st+RKPG,d.length)+' of '+d.length;
+  document.getElementById('riskPrev').disabled=rkpg===0;
+  document.getElementById('riskNext').disabled=st+RKPG>=d.length;
+  document.getElementById('riskBody').innerHTML=sl.map(function(r){
+    var g=calcRank(r.score);
+    var lobC=r.lob==='GUARDIAN'?'bg':'ba';
+    var team=REP_TEAM[r.rep]||'Unassigned';
+    var wC=r.in_window?'#00d48a':'#ff3d5a';
+    var pC=r.needed<=1?'#00d48a':r.needed<=2?'#f59e0b':'#ff3d5a';
+    var nC=r.nsf>2?'color:#ff3d5a':r.nsf>0?'color:#f59e0b':'';
+    return '<tr>'+
+      '<td><span class="'+rankCls(g)+'">'+g+'</span></td>'+
+      '<td style="font-weight:600;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis">'+r.name+'</td>'+
+      '<td><span class="badge '+lobC+'">'+(r.lob==='GUARDIAN'?'GLG':'ALV')+'</span></td>'+
+      '<td><div style="font-size:11px">'+r.rep+'</div><div style="font-size:9px;color:#4a5a72">'+team+'</div></td>'+
+      '<td style="font-size:10px;color:#8a9bb5;font-family:DM Mono,monospace">'+(r.cohort_label||'—')+'</td>'+
+      '<td><span class="badge bk">'+r.freq+'</span></td>'+
+      '<td style="font-family:DM Mono,monospace;color:#00d48a">'+r.cleared+'/'+r.thresh+'</td>'+
+      '<td style="font-family:DM Mono,monospace;color:'+pC+';font-weight:600">'+r.needed+'</td>'+
+      '<td style="font-family:DM Mono,monospace;'+nC+'">'+r.nsf+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:11px;white-space:nowrap">'+(r.phone||'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.pmt?'$'+r.pmt.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}):'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.debt?'$'+r.debt.toLocaleString():'—')+'</td>'+
+      '<td style="font-size:10px;color:'+wC+';font-family:DM Mono,monospace">'+(r.in_window?(r.window_end||'Open'):'CLOSED')+'</td>'+
+      '<td style="font-size:10px;color:#8a9bb5;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(r.notes||'')+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+// ===== CLIENT DB =====
+function dbStatusCls(s){if(s==='Active - At Risk')return'by';if(s==='Active - On Track')return'ba';if(s==='NSF')return'br';return'bk';}
+function fDB(){
+  var q=document.getElementById('dbQ').value.toLowerCase();
+  var lob=document.getElementById('dbLob').value;
+  var team=document.getElementById('dbTeam').value;
+  var status=document.getElementById('dbStatus').value;
+  var sort=document.getElementById('dbSort').value;
+  var d=_DB.filter(function(r){
+    if(lob!=='ALL'&&r.lob!==lob)return false;
+    if(status!=='ALL'&&r.status!==status)return false;
+    if(team!=='ALL'&&REP_TEAM[r.rep]!==team)return false;
+    if(q){
+      var digits=q.replace(/[^0-9]/g,'');
+      if(digits.length>=4&&r.phone&&r.phone.replace(/[^0-9]/g,'').includes(digits))return true;
+      if(r.id&&r.id.includes(q))return true;
+      return r.name.toLowerCase().includes(q)||r.rep.toLowerCase().includes(q);
+    }
+    return true;
+  });
+  if(sort==='name')d.sort(function(a,b){return a.name.localeCompare(b.name);});
+  else if(sort==='debt_desc')d.sort(function(a,b){return b.debt-a.debt;});
+  else if(sort==='cleared_desc')d.sort(function(a,b){return b.cleared-a.cleared;});
+  else if(sort==='recent')d.sort(function(a,b){return(b.fp_cleared||'').localeCompare(a.fp_cleared||'');});
+  return d;
+}
+function pmtDots(r){
+  var out='<div style="display:flex;gap:3px">';
+  for(var i=0;i<Math.min(r.thresh||3,6);i++){
+    var cleared=r.p&&r.p[i];
+    out+='<div style="width:8px;height:8px;border-radius:50%;background:'+(cleared?'#00d48a':'#1c2535')+';border:1px solid '+(cleared?'#00d48a':'#243447')+'" title="'+(cleared||'not cleared')+'"></div>';
+  }
+  return out+'</div>';
+}
+function renderDB(){
+  var d=fDB(),st=dbpg*DBPG,sl=d.slice(st,st+DBPG);
+  document.getElementById('dbCount').textContent=d.length.toLocaleString()+' clients (3,000 loaded)';
+  document.getElementById('dbPgInfo').textContent=(st+1)+'-'+Math.min(st+DBPG,d.length)+' of '+d.length;
+  document.getElementById('dbPrev').disabled=dbpg===0;
+  document.getElementById('dbNext').disabled=st+DBPG>=d.length;
+  document.getElementById('dbBody').innerHTML=sl.map(function(r){
+    var nc=r.nsf>2?'color:#ff3d5a':r.nsf>0?'color:#f59e0b':'';
+    var team=REP_TEAM[r.rep]||'Unassigned';
+    var lobC=r.lob==='GUARDIAN'?'bg':'ba';
+    return '<tr>'+
+      '<td style="font-weight:600;white-space:nowrap">'+r.name+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:10px;color:#4a5a72">'+r.id+'</td>'+
+      '<td><span class="badge '+lobC+'">'+(r.lob==='GUARDIAN'?'GLG':'ALV')+'</span></td>'+
+      '<td><div style="font-size:11px">'+r.rep+'</div><div style="font-size:9px;color:#4a5a72">'+team+'</div></td>'+
+      '<td><span class="badge '+dbStatusCls(r.status)+'">'+r.status+'</span></td>'+
+      '<td><span class="badge bk">'+r.freq+'</span></td>'+
+      '<td style="font-family:DM Mono,monospace;color:'+(r.cleared>=r.thresh?'#00d48a':r.cleared>0?'#f59e0b':'#4a5a72')+'">'+r.cleared+'/'+r.thresh+'</td>'+
+      '<td>'+pmtDots(r)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;'+nc+'">'+r.nsf+'</td>'+
+      '<td style="font-family:DM Mono,monospace;white-space:nowrap">'+(r.phone||'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.pmt?'$'+r.pmt.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}):'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.debt?'$'+r.debt.toLocaleString():'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.fp_cleared||'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.next_pmt||'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.enrolled||'—')+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+document.addEventListener('DOMContentLoaded',function(){
+  initSelects();
+  renderOverview();
+});
+
+</script>
+</body>
+</html>+commPerFileVal.toLocaleString()+' avg debt &times; '+(rate*100).toFixed(1)+'%</div>'+
+    '</div>';
+  } else {
+    var rc=retColor(c.cur_ret);
+    var bp=Math.max(0,Math.min(100,(c.cur_ret-60)/40*100));
+    var adj=c.cur_adj;
+    var adjC=adj>0?'#00d48a':adj>=-2.5?'#f59e0b':'#ff3d5a';
+    body='<div style="font-family:Barlow Condensed,sans-serif;font-size:40px;font-weight:800;color:'+rc+';line-height:1">'+c.cur_ret.toFixed(1)+'%</div>'+
+      '<div style="height:4px;background:#1c2535;border-radius:2px;margin:8px 0 4px;overflow:hidden"><div style="width:'+bp+'%;height:100%;background:'+rc+'"></div></div>'+
+      '<div style="font-size:9px;color:#4a5a72;text-align:right;font-family:DM Mono,monospace;margin-bottom:8px">'+fmtM(c.est_commission)+' est. comm</div>'+
+      '<div style="display:flex;gap:8px;padding-top:8px;border-top:1px solid #1e2d42">'+
+        '<div style="flex:1"><div style="font-size:9px;color:#4a5a72;text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px">Files</div><div style="font-family:DM Mono,monospace;font-size:12px;font-weight:600">'+c.payable_files.toLocaleString()+'</div></div>'+
+        '<div style="flex:1"><div style="font-size:9px;color:#4a5a72;text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px">Passed</div><div style="font-family:DM Mono,monospace;font-size:12px;font-weight:600;color:#00d48a">'+c.passes.toLocaleString()+'</div></div>'+
+        '<div style="flex:1"><div style="font-size:9px;color:#4a5a72;text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px">Failed</div><div style="font-family:DM Mono,monospace;font-size:12px;font-weight:600;color:#ff3d5a">'+c.fails.toLocaleString()+'</div></div>'+
+        '<div style="flex:1"><div style="font-size:9px;color:#4a5a72;text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px">Adj</div><div style="font-family:DM Mono,monospace;font-size:12px;font-weight:600;color:'+adjC+'">'+(adj>=0?'+':'')+adj+'%</div></div>'+
+      '</div>';
+  }
+  return '<div class="cohort-card" style="border:1px solid '+borderC+';border-top:2px solid '+topC+'">'+
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'+
+      '<div>'+
+        '<div style="font-family:Barlow Condensed,sans-serif;font-size:17px;font-weight:700">'+c.month_label+'</div>'+
+        '<div style="margin-top:4px">'+statusBadge+'</div>'+
+      '</div>'+
+      '<span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:3px;background:'+lobC+';color:'+lobTc+'">'+lob+'</span>'+
+    '</div>'+
+    body+
+    '<div style="font-size:9px;color:#4a5a72;margin-top:8px;padding-top:7px;border-top:1px solid #1e2d42;font-family:DM Mono,monospace">'+c.source+'</div>'+
+  '</div>';
+}
+
+function renderForecast(cohorts,rate,elId,cpf,histRate){
+  var el=document.getElementById(elId);
+  if(!el)return;
+  el.innerHTML=cohorts.map(function(c){
+    var early=c.incomplete&&c.fails===0&&c.cur_ret>90;
+    if(early){
+      var dE=16,dR=15;
+      var proj=c.passes+Math.round(c.passes/dE*dR);
+      var comm=proj*avgDebt*rate;
+      return '<div class="fc-row" style="border-left:2px solid #22d3ee;padding-left:10px">'+
+        '<div>'+
+          '<div class="fc-month">'+c.month_label+' <span style="font-size:9px;color:#22d3ee">&#9679; IN PROGRESS</span></div>'+
+          '<div class="fc-sub">'+c.passes.toLocaleString()+' cleared &divide; '+dE+'d = '+(c.passes/dE).toFixed(1)+'/day &times; '+dR+'d remaining</div>'+
+          '<div class="fc-sub" style="color:#4a5a72">'+proj.toLocaleString()+' proj. files &times; $'+cpf.toLocaleString()+'/file ('+histRate+'% hist. rate)</div>'+
+        '</div>'+
+        '<div class="fc-vals">'+
+          '<div class="fc-ret" style="color:#22d3ee;font-size:13px">N/A</div>'+
+          '<div class="fc-comm">'+fmtM(comm)+'</div>'+
+        '</div>'+
+      '</div>';
+    }
+    var rc=retColor(c.cur_ret);
+    var tiers=[{r:85,l:'+5% Bonus',c:'#00d48a'},{r:82.5,l:'+2.5% Bonus',c:'#6ee7b7'},{r:80,l:'0% Neutral',c:'#8a9bb5'},{r:77.5,l:'-2.5%',c:'#f59e0b'},{r:70,l:'-5%',c:'#fb923c'},{r:65,l:'-10%',c:'#ff3d5a'},{r:0,l:'-12%',c:'#f43f5e'}];
+    var next=tiers.find(function(t){return c.cur_ret<t.r;});
+    var nextStr=next?'<span style="color:'+next.c+';font-size:10px">'+(next.r-c.cur_ret).toFixed(1)+'% to '+next.l+'</span>':'<span style="color:#00d48a;font-size:10px">&#10003; In bonus tier</span>';
+    return '<div class="fc-row">'+
+      '<div>'+
+        '<div class="fc-month">'+c.month_label+' '+(c.window_closed?'<span style="font-size:9px;color:#00d48a">&#10003; FINAL</span>':'<span style="font-size:9px;color:#4d8fff">&#9679; OPEN</span>')+'</div>'+
+        '<div class="fc-sub">'+c.payable_files.toLocaleString()+' files &middot; '+(c.window_closed?'closed':c.days_left+'d left')+'</div>'+
+      '</div>'+
+      '<div class="fc-vals">'+
+        '<div class="fc-ret" style="color:'+rc+'">'+c.cur_ret.toFixed(1)+'%</div>'+
+        '<div class="fc-comm">'+fmtM(c.est_commission)+' '+nextStr+'</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+// ===== CHART =====
+var _chart=null;
+function renderChart(){
+  var ctx=document.getElementById('monthlyChart');
+  if(!ctx)return;
+  if(_chart)_chart.destroy();
+  var months=[...new Set(MONTHLY.map(function(m){return m.month_label;}))];
+  var glgD=months.map(function(ml){var r=MONTHLY.find(function(m){return m.month_label===ml&&m.lob==='GUARDIAN';});return r?r.files:0;});
+  var alvD=months.map(function(ml){var r=MONTHLY.find(function(m){return m.month_label===ml&&m.lob==='ALLEVIATE';});return r?r.files:0;});
+  _chart=new Chart(ctx,{type:'bar',data:{labels:months.map(function(m){return m.replace(' 20',"'");}),datasets:[{label:'Guardian',data:glgD,backgroundColor:'rgba(77,143,255,.7)',borderRadius:3},{label:'Alleviate',data:alvD,backgroundColor:'rgba(0,212,138,.65)',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c2535',borderColor:'#243447',borderWidth:1,titleColor:'#e8edf5',bodyColor:'#8a9bb5'}},scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#4a5a72',font:{size:10}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#4a5a72',font:{size:10}}}}}});
+}
+
+// ===== REPS =====
+function fReps(){
+  var q=document.getElementById('repQ').value.toLowerCase();
+  var lob=document.getElementById('repLob').value;
+  var team=document.getElementById('repTeam').value;
+  var sort=document.getElementById('repSort').value;
+  var d=REPS.filter(function(r){
+    if(q&&!r.rep.toLowerCase().includes(q))return false;
+    if(lob==='GUARDIAN'&&!r.guardian_files)return false;
+    if(lob==='ALLEVIATE'&&!r.alleviate_files)return false;
+    if(team!=='ALL'&&REP_TEAM[r.rep]!==team)return false;
+    return true;
+  });
+  if(sort==='worst')d.sort(function(a,b){return a.overall_ret-b.overall_ret;});
+  else if(sort==='best')d.sort(function(a,b){return b.overall_ret-a.overall_ret;});
+  else if(sort==='files')d.sort(function(a,b){return b.total_files-a.total_files;});
+  else if(sort==='commission')d.sort(function(a,b){return b.commission-a.commission;});
+  else d.sort(function(a,b){return a.rep.localeCompare(b.rep);});
+  return d;
+}
+function renderReps(){
+  var d=fReps(),st=rpg*RPG,sl=d.slice(st,st+RPG);
+  document.getElementById('repCount').textContent=d.length.toLocaleString()+' reps';
+  document.getElementById('repPgInfo').textContent=(st+1)+'-'+Math.min(st+RPG,d.length)+' of '+d.length;
+  document.getElementById('repPrev').disabled=rpg===0;
+  document.getElementById('repNext').disabled=st+RPG>=d.length;
+  document.getElementById('repBody').innerHTML=sl.map(function(r){
+    var rc=retColor(r.overall_ret);
+    var bw=Math.max(0,Math.min(100,(r.overall_ret-60)/40*100));
+    var team=REP_TEAM[r.rep]||'Unassigned';
+    var adjC=r.overall_adj>0?'#00d48a':r.overall_adj>=-2.5?'#f59e0b':'#ff3d5a';
+    return '<tr>'+
+      '<td style="font-weight:600;white-space:nowrap">'+r.rep+'</td>'+
+      '<td style="font-size:10px;color:#8a9bb5">'+team+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+r.total_files+'</td>'+
+      '<td style="font-family:DM Mono,monospace;color:#00d48a">'+r.total_passes+'</td>'+
+      '<td style="font-family:DM Mono,monospace;color:#ff3d5a">'+r.total_fails+'</td>'+
+      '<td><div style="display:flex;align-items:center;gap:8px"><span style="font-family:DM Mono,monospace;color:'+rc+';font-weight:600;width:46px">'+fmtPct(r.overall_ret)+'</span><div style="flex:1;height:5px;background:#1c2535;border-radius:3px;min-width:60px"><div style="width:'+bw+'%;height:100%;background:'+rc+';border-radius:3px"></div></div></div></td>'+
+      '<td style="font-family:DM Mono,monospace;color:'+adjC+'">'+(r.overall_adj>=0?'+':'')+r.overall_adj+'%</td>'+
+      '<td style="font-family:DM Mono,monospace;color:'+(r.guardian_ret!=null?retColor(r.guardian_ret):'#4a5a72')+'">'+(r.guardian_ret!=null?fmtPct(r.guardian_ret):'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace;color:'+(r.alleviate_ret!=null?retColor(r.alleviate_ret):'#4a5a72')+'">'+(r.alleviate_ret!=null?fmtPct(r.alleviate_ret):'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-weight:600">'+fmtM(r.commission)+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+// ===== AT-RISK =====
+function fRisk(){
+  var q=document.getElementById('riskQ').value.toLowerCase();
+  var lob=document.getElementById('riskLob').value;
+  var lbm=document.getElementById('riskLBMonth').value;
+  var team=document.getElementById('riskTeam').value;
+  var rank=document.getElementById('riskRank').value;
+  var sort=document.getElementById('riskSort').value;
+  var d=_AR.filter(function(r){
+    if(lob!=='ALL'&&r.lob!==lob)return false;
+    if(lbm!=='ALL'&&r.cohort_month!==lbm)return false;
+    if(team!=='ALL'&&REP_TEAM[r.rep]!==team)return false;
+    var g=calcRank(r.score);
+    if(rank!=='ALL'){
+      var fMap={'A+':['A+'],'A':['A'],'A-':['A-'],'B+':['B+'],'B':['B'],'B-':['B-'],'C+':['C+'],'C':['C'],'C-':['C-'],'D+':['D+','D','D-','F+','F','F-'],'F':['F+','F','F-']};
+      if(fMap[rank]&&!fMap[rank].includes(g))return false;
+    }
+    if(q){
+      var digits=q.replace(/[^0-9]/g,'');
+      if(digits.length>=4&&r.phone&&r.phone.replace(/[^0-9]/g,'').includes(digits))return true;
+      return r.name.toLowerCase().includes(q)||r.rep.toLowerCase().includes(q);
+    }
+    return true;
+  });
+  if(sort==='score_desc')d.sort(function(a,b){return b.score-a.score;});
+  else if(sort==='score_asc')d.sort(function(a,b){return a.score-b.score;});
+  else if(sort==='pmts')d.sort(function(a,b){return a.needed-b.needed;});
+  else if(sort==='debt')d.sort(function(a,b){return b.debt-a.debt;});
+  else d.sort(function(a,b){return(b.fp_cleared||'').localeCompare(a.fp_cleared||'');});
+  return d;
+}
+function renderRisk(){
+  var d=fRisk(),st=rkpg*RKPG,sl=d.slice(st,st+RKPG);
+  document.getElementById('riskCount').innerHTML=d.length.toLocaleString()+' clients';
+  document.getElementById('riskPgInfo').textContent=(st+1)+'-'+Math.min(st+RKPG,d.length)+' of '+d.length;
+  document.getElementById('riskPrev').disabled=rkpg===0;
+  document.getElementById('riskNext').disabled=st+RKPG>=d.length;
+  document.getElementById('riskBody').innerHTML=sl.map(function(r){
+    var g=calcRank(r.score);
+    var lobC=r.lob==='GUARDIAN'?'bg':'ba';
+    var team=REP_TEAM[r.rep]||'Unassigned';
+    var wC=r.in_window?'#00d48a':'#ff3d5a';
+    var pC=r.needed<=1?'#00d48a':r.needed<=2?'#f59e0b':'#ff3d5a';
+    var nC=r.nsf>2?'color:#ff3d5a':r.nsf>0?'color:#f59e0b':'';
+    return '<tr>'+
+      '<td><span class="'+rankCls(g)+'">'+g+'</span></td>'+
+      '<td style="font-weight:600;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis">'+r.name+'</td>'+
+      '<td><span class="badge '+lobC+'">'+(r.lob==='GUARDIAN'?'GLG':'ALV')+'</span></td>'+
+      '<td><div style="font-size:11px">'+r.rep+'</div><div style="font-size:9px;color:#4a5a72">'+team+'</div></td>'+
+      '<td style="font-size:10px;color:#8a9bb5;font-family:DM Mono,monospace">'+(r.cohort_label||'—')+'</td>'+
+      '<td><span class="badge bk">'+r.freq+'</span></td>'+
+      '<td style="font-family:DM Mono,monospace;color:#00d48a">'+r.cleared+'/'+r.thresh+'</td>'+
+      '<td style="font-family:DM Mono,monospace;color:'+pC+';font-weight:600">'+r.needed+'</td>'+
+      '<td style="font-family:DM Mono,monospace;'+nC+'">'+r.nsf+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:11px;white-space:nowrap">'+(r.phone||'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.pmt?'$'+r.pmt.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}):'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.debt?'$'+r.debt.toLocaleString():'—')+'</td>'+
+      '<td style="font-size:10px;color:'+wC+';font-family:DM Mono,monospace">'+(r.in_window?(r.window_end||'Open'):'CLOSED')+'</td>'+
+      '<td style="font-size:10px;color:#8a9bb5;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(r.notes||'')+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+// ===== CLIENT DB =====
+function dbStatusCls(s){if(s==='Active - At Risk')return'by';if(s==='Active - On Track')return'ba';if(s==='NSF')return'br';return'bk';}
+function fDB(){
+  var q=document.getElementById('dbQ').value.toLowerCase();
+  var lob=document.getElementById('dbLob').value;
+  var team=document.getElementById('dbTeam').value;
+  var status=document.getElementById('dbStatus').value;
+  var sort=document.getElementById('dbSort').value;
+  var d=_DB.filter(function(r){
+    if(lob!=='ALL'&&r.lob!==lob)return false;
+    if(status!=='ALL'&&r.status!==status)return false;
+    if(team!=='ALL'&&REP_TEAM[r.rep]!==team)return false;
+    if(q){
+      var digits=q.replace(/[^0-9]/g,'');
+      if(digits.length>=4&&r.phone&&r.phone.replace(/[^0-9]/g,'').includes(digits))return true;
+      if(r.id&&r.id.includes(q))return true;
+      return r.name.toLowerCase().includes(q)||r.rep.toLowerCase().includes(q);
+    }
+    return true;
+  });
+  if(sort==='name')d.sort(function(a,b){return a.name.localeCompare(b.name);});
+  else if(sort==='debt_desc')d.sort(function(a,b){return b.debt-a.debt;});
+  else if(sort==='cleared_desc')d.sort(function(a,b){return b.cleared-a.cleared;});
+  else if(sort==='recent')d.sort(function(a,b){return(b.fp_cleared||'').localeCompare(a.fp_cleared||'');});
+  return d;
+}
+function pmtDots(r){
+  var out='<div style="display:flex;gap:3px">';
+  for(var i=0;i<Math.min(r.thresh||3,6);i++){
+    var cleared=r.p&&r.p[i];
+    out+='<div style="width:8px;height:8px;border-radius:50%;background:'+(cleared?'#00d48a':'#1c2535')+';border:1px solid '+(cleared?'#00d48a':'#243447')+'" title="'+(cleared||'not cleared')+'"></div>';
+  }
+  return out+'</div>';
+}
+function renderDB(){
+  var d=fDB(),st=dbpg*DBPG,sl=d.slice(st,st+DBPG);
+  document.getElementById('dbCount').textContent=d.length.toLocaleString()+' clients (3,000 loaded)';
+  document.getElementById('dbPgInfo').textContent=(st+1)+'-'+Math.min(st+DBPG,d.length)+' of '+d.length;
+  document.getElementById('dbPrev').disabled=dbpg===0;
+  document.getElementById('dbNext').disabled=st+DBPG>=d.length;
+  document.getElementById('dbBody').innerHTML=sl.map(function(r){
+    var nc=r.nsf>2?'color:#ff3d5a':r.nsf>0?'color:#f59e0b':'';
+    var team=REP_TEAM[r.rep]||'Unassigned';
+    var lobC=r.lob==='GUARDIAN'?'bg':'ba';
+    return '<tr>'+
+      '<td style="font-weight:600;white-space:nowrap">'+r.name+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:10px;color:#4a5a72">'+r.id+'</td>'+
+      '<td><span class="badge '+lobC+'">'+(r.lob==='GUARDIAN'?'GLG':'ALV')+'</span></td>'+
+      '<td><div style="font-size:11px">'+r.rep+'</div><div style="font-size:9px;color:#4a5a72">'+team+'</div></td>'+
+      '<td><span class="badge '+dbStatusCls(r.status)+'">'+r.status+'</span></td>'+
+      '<td><span class="badge bk">'+r.freq+'</span></td>'+
+      '<td style="font-family:DM Mono,monospace;color:'+(r.cleared>=r.thresh?'#00d48a':r.cleared>0?'#f59e0b':'#4a5a72')+'">'+r.cleared+'/'+r.thresh+'</td>'+
+      '<td>'+pmtDots(r)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;'+nc+'">'+r.nsf+'</td>'+
+      '<td style="font-family:DM Mono,monospace;white-space:nowrap">'+(r.phone||'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.pmt?'$'+r.pmt.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}):'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.debt?'$'+r.debt.toLocaleString():'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.fp_cleared||'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.next_pmt||'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.enrolled||'—')+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+document.addEventListener('DOMContentLoaded',function(){
+  initSelects();
+  renderOverview();
+});
+
+</script>
+</body>
+</html>+(c.lob==='GUARDIAN'?'30,555':'32,223')+' avg debt &times; '+(c.lob==='GUARDIAN'?'7.6':'8.5')+'%'% hist. rate)</div>'+
+        '</div>'+
+        '<div class="fc-vals">'+
+          '<div class="fc-ret" style="color:#22d3ee;font-size:13px">N/A</div>'+
+          '<div class="fc-comm">'+fmtM(comm)+'</div>'+
+        '</div>'+
+      '</div>';
+    }
+    var rc=retColor(c.cur_ret);
+    var tiers=[{r:85,l:'+5% Bonus',c:'#00d48a'},{r:82.5,l:'+2.5% Bonus',c:'#6ee7b7'},{r:80,l:'0% Neutral',c:'#8a9bb5'},{r:77.5,l:'-2.5%',c:'#f59e0b'},{r:70,l:'-5%',c:'#fb923c'},{r:65,l:'-10%',c:'#ff3d5a'},{r:0,l:'-12%',c:'#f43f5e'}];
+    var next=tiers.find(function(t){return c.cur_ret<t.r;});
+    var nextStr=next?'<span style="color:'+next.c+';font-size:10px">'+(next.r-c.cur_ret).toFixed(1)+'% to '+next.l+'</span>':'<span style="color:#00d48a;font-size:10px">&#10003; In bonus tier</span>';
+    return '<div class="fc-row">'+
+      '<div>'+
+        '<div class="fc-month">'+c.month_label+' '+(c.window_closed?'<span style="font-size:9px;color:#00d48a">&#10003; FINAL</span>':'<span style="font-size:9px;color:#4d8fff">&#9679; OPEN</span>')+'</div>'+
+        '<div class="fc-sub">'+c.payable_files.toLocaleString()+' files &middot; '+(c.window_closed?'closed':c.days_left+'d left')+'</div>'+
+      '</div>'+
+      '<div class="fc-vals">'+
+        '<div class="fc-ret" style="color:'+rc+'">'+c.cur_ret.toFixed(1)+'%</div>'+
+        '<div class="fc-comm">'+fmtM(c.est_commission)+' '+nextStr+'</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+// ===== CHART =====
+var _chart=null;
+function renderChart(){
+  var ctx=document.getElementById('monthlyChart');
+  if(!ctx)return;
+  if(_chart)_chart.destroy();
+  var months=[...new Set(MONTHLY.map(function(m){return m.month_label;}))];
+  var glgD=months.map(function(ml){var r=MONTHLY.find(function(m){return m.month_label===ml&&m.lob==='GUARDIAN';});return r?r.files:0;});
+  var alvD=months.map(function(ml){var r=MONTHLY.find(function(m){return m.month_label===ml&&m.lob==='ALLEVIATE';});return r?r.files:0;});
+  _chart=new Chart(ctx,{type:'bar',data:{labels:months.map(function(m){return m.replace(' 20',"'");}),datasets:[{label:'Guardian',data:glgD,backgroundColor:'rgba(77,143,255,.7)',borderRadius:3},{label:'Alleviate',data:alvD,backgroundColor:'rgba(0,212,138,.65)',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c2535',borderColor:'#243447',borderWidth:1,titleColor:'#e8edf5',bodyColor:'#8a9bb5'}},scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#4a5a72',font:{size:10}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#4a5a72',font:{size:10}}}}}});
+}
+
+// ===== REPS =====
+function fReps(){
+  var q=document.getElementById('repQ').value.toLowerCase();
+  var lob=document.getElementById('repLob').value;
+  var team=document.getElementById('repTeam').value;
+  var sort=document.getElementById('repSort').value;
+  var d=REPS.filter(function(r){
+    if(q&&!r.rep.toLowerCase().includes(q))return false;
+    if(lob==='GUARDIAN'&&!r.guardian_files)return false;
+    if(lob==='ALLEVIATE'&&!r.alleviate_files)return false;
+    if(team!=='ALL'&&REP_TEAM[r.rep]!==team)return false;
+    return true;
+  });
+  if(sort==='worst')d.sort(function(a,b){return a.overall_ret-b.overall_ret;});
+  else if(sort==='best')d.sort(function(a,b){return b.overall_ret-a.overall_ret;});
+  else if(sort==='files')d.sort(function(a,b){return b.total_files-a.total_files;});
+  else if(sort==='commission')d.sort(function(a,b){return b.commission-a.commission;});
+  else d.sort(function(a,b){return a.rep.localeCompare(b.rep);});
+  return d;
+}
+function renderReps(){
+  var d=fReps(),st=rpg*RPG,sl=d.slice(st,st+RPG);
+  document.getElementById('repCount').textContent=d.length.toLocaleString()+' reps';
+  document.getElementById('repPgInfo').textContent=(st+1)+'-'+Math.min(st+RPG,d.length)+' of '+d.length;
+  document.getElementById('repPrev').disabled=rpg===0;
+  document.getElementById('repNext').disabled=st+RPG>=d.length;
+  document.getElementById('repBody').innerHTML=sl.map(function(r){
+    var rc=retColor(r.overall_ret);
+    var bw=Math.max(0,Math.min(100,(r.overall_ret-60)/40*100));
+    var team=REP_TEAM[r.rep]||'Unassigned';
+    var adjC=r.overall_adj>0?'#00d48a':r.overall_adj>=-2.5?'#f59e0b':'#ff3d5a';
+    return '<tr>'+
+      '<td style="font-weight:600;white-space:nowrap">'+r.rep+'</td>'+
+      '<td style="font-size:10px;color:#8a9bb5">'+team+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+r.total_files+'</td>'+
+      '<td style="font-family:DM Mono,monospace;color:#00d48a">'+r.total_passes+'</td>'+
+      '<td style="font-family:DM Mono,monospace;color:#ff3d5a">'+r.total_fails+'</td>'+
+      '<td><div style="display:flex;align-items:center;gap:8px"><span style="font-family:DM Mono,monospace;color:'+rc+';font-weight:600;width:46px">'+fmtPct(r.overall_ret)+'</span><div style="flex:1;height:5px;background:#1c2535;border-radius:3px;min-width:60px"><div style="width:'+bw+'%;height:100%;background:'+rc+';border-radius:3px"></div></div></div></td>'+
+      '<td style="font-family:DM Mono,monospace;color:'+adjC+'">'+(r.overall_adj>=0?'+':'')+r.overall_adj+'%</td>'+
+      '<td style="font-family:DM Mono,monospace;color:'+(r.guardian_ret!=null?retColor(r.guardian_ret):'#4a5a72')+'">'+(r.guardian_ret!=null?fmtPct(r.guardian_ret):'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace;color:'+(r.alleviate_ret!=null?retColor(r.alleviate_ret):'#4a5a72')+'">'+(r.alleviate_ret!=null?fmtPct(r.alleviate_ret):'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-weight:600">'+fmtM(r.commission)+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+// ===== AT-RISK =====
+function fRisk(){
+  var q=document.getElementById('riskQ').value.toLowerCase();
+  var lob=document.getElementById('riskLob').value;
+  var lbm=document.getElementById('riskLBMonth').value;
+  var team=document.getElementById('riskTeam').value;
+  var rank=document.getElementById('riskRank').value;
+  var sort=document.getElementById('riskSort').value;
+  var d=_AR.filter(function(r){
+    if(lob!=='ALL'&&r.lob!==lob)return false;
+    if(lbm!=='ALL'&&r.cohort_month!==lbm)return false;
+    if(team!=='ALL'&&REP_TEAM[r.rep]!==team)return false;
+    var g=calcRank(r.score);
+    if(rank!=='ALL'){
+      var fMap={'A+':['A+'],'A':['A'],'A-':['A-'],'B+':['B+'],'B':['B'],'B-':['B-'],'C+':['C+'],'C':['C'],'C-':['C-'],'D+':['D+','D','D-','F+','F','F-'],'F':['F+','F','F-']};
+      if(fMap[rank]&&!fMap[rank].includes(g))return false;
+    }
+    if(q){
+      var digits=q.replace(/[^0-9]/g,'');
+      if(digits.length>=4&&r.phone&&r.phone.replace(/[^0-9]/g,'').includes(digits))return true;
+      return r.name.toLowerCase().includes(q)||r.rep.toLowerCase().includes(q);
+    }
+    return true;
+  });
+  if(sort==='score_desc')d.sort(function(a,b){return b.score-a.score;});
+  else if(sort==='score_asc')d.sort(function(a,b){return a.score-b.score;});
+  else if(sort==='pmts')d.sort(function(a,b){return a.needed-b.needed;});
+  else if(sort==='debt')d.sort(function(a,b){return b.debt-a.debt;});
+  else d.sort(function(a,b){return(b.fp_cleared||'').localeCompare(a.fp_cleared||'');});
+  return d;
+}
+function renderRisk(){
+  var d=fRisk(),st=rkpg*RKPG,sl=d.slice(st,st+RKPG);
+  document.getElementById('riskCount').innerHTML=d.length.toLocaleString()+' clients';
+  document.getElementById('riskPgInfo').textContent=(st+1)+'-'+Math.min(st+RKPG,d.length)+' of '+d.length;
+  document.getElementById('riskPrev').disabled=rkpg===0;
+  document.getElementById('riskNext').disabled=st+RKPG>=d.length;
+  document.getElementById('riskBody').innerHTML=sl.map(function(r){
+    var g=calcRank(r.score);
+    var lobC=r.lob==='GUARDIAN'?'bg':'ba';
+    var team=REP_TEAM[r.rep]||'Unassigned';
+    var wC=r.in_window?'#00d48a':'#ff3d5a';
+    var pC=r.needed<=1?'#00d48a':r.needed<=2?'#f59e0b':'#ff3d5a';
+    var nC=r.nsf>2?'color:#ff3d5a':r.nsf>0?'color:#f59e0b':'';
+    return '<tr>'+
+      '<td><span class="'+rankCls(g)+'">'+g+'</span></td>'+
+      '<td style="font-weight:600;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis">'+r.name+'</td>'+
+      '<td><span class="badge '+lobC+'">'+(r.lob==='GUARDIAN'?'GLG':'ALV')+'</span></td>'+
+      '<td><div style="font-size:11px">'+r.rep+'</div><div style="font-size:9px;color:#4a5a72">'+team+'</div></td>'+
+      '<td style="font-size:10px;color:#8a9bb5;font-family:DM Mono,monospace">'+(r.cohort_label||'—')+'</td>'+
+      '<td><span class="badge bk">'+r.freq+'</span></td>'+
+      '<td style="font-family:DM Mono,monospace;color:#00d48a">'+r.cleared+'/'+r.thresh+'</td>'+
+      '<td style="font-family:DM Mono,monospace;color:'+pC+';font-weight:600">'+r.needed+'</td>'+
+      '<td style="font-family:DM Mono,monospace;'+nC+'">'+r.nsf+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:11px;white-space:nowrap">'+(r.phone||'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.pmt?'$'+r.pmt.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}):'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.debt?'$'+r.debt.toLocaleString():'—')+'</td>'+
+      '<td style="font-size:10px;color:'+wC+';font-family:DM Mono,monospace">'+(r.in_window?(r.window_end||'Open'):'CLOSED')+'</td>'+
+      '<td style="font-size:10px;color:#8a9bb5;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(r.notes||'')+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+// ===== CLIENT DB =====
+function dbStatusCls(s){if(s==='Active - At Risk')return'by';if(s==='Active - On Track')return'ba';if(s==='NSF')return'br';return'bk';}
+function fDB(){
+  var q=document.getElementById('dbQ').value.toLowerCase();
+  var lob=document.getElementById('dbLob').value;
+  var team=document.getElementById('dbTeam').value;
+  var status=document.getElementById('dbStatus').value;
+  var sort=document.getElementById('dbSort').value;
+  var d=_DB.filter(function(r){
+    if(lob!=='ALL'&&r.lob!==lob)return false;
+    if(status!=='ALL'&&r.status!==status)return false;
+    if(team!=='ALL'&&REP_TEAM[r.rep]!==team)return false;
+    if(q){
+      var digits=q.replace(/[^0-9]/g,'');
+      if(digits.length>=4&&r.phone&&r.phone.replace(/[^0-9]/g,'').includes(digits))return true;
+      if(r.id&&r.id.includes(q))return true;
+      return r.name.toLowerCase().includes(q)||r.rep.toLowerCase().includes(q);
+    }
+    return true;
+  });
+  if(sort==='name')d.sort(function(a,b){return a.name.localeCompare(b.name);});
+  else if(sort==='debt_desc')d.sort(function(a,b){return b.debt-a.debt;});
+  else if(sort==='cleared_desc')d.sort(function(a,b){return b.cleared-a.cleared;});
+  else if(sort==='recent')d.sort(function(a,b){return(b.fp_cleared||'').localeCompare(a.fp_cleared||'');});
+  return d;
+}
+function pmtDots(r){
+  var out='<div style="display:flex;gap:3px">';
+  for(var i=0;i<Math.min(r.thresh||3,6);i++){
+    var cleared=r.p&&r.p[i];
+    out+='<div style="width:8px;height:8px;border-radius:50%;background:'+(cleared?'#00d48a':'#1c2535')+';border:1px solid '+(cleared?'#00d48a':'#243447')+'" title="'+(cleared||'not cleared')+'"></div>';
+  }
+  return out+'</div>';
+}
+function renderDB(){
+  var d=fDB(),st=dbpg*DBPG,sl=d.slice(st,st+DBPG);
+  document.getElementById('dbCount').textContent=d.length.toLocaleString()+' clients (3,000 loaded)';
+  document.getElementById('dbPgInfo').textContent=(st+1)+'-'+Math.min(st+DBPG,d.length)+' of '+d.length;
+  document.getElementById('dbPrev').disabled=dbpg===0;
+  document.getElementById('dbNext').disabled=st+DBPG>=d.length;
+  document.getElementById('dbBody').innerHTML=sl.map(function(r){
+    var nc=r.nsf>2?'color:#ff3d5a':r.nsf>0?'color:#f59e0b':'';
+    var team=REP_TEAM[r.rep]||'Unassigned';
+    var lobC=r.lob==='GUARDIAN'?'bg':'ba';
+    return '<tr>'+
+      '<td style="font-weight:600;white-space:nowrap">'+r.name+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:10px;color:#4a5a72">'+r.id+'</td>'+
+      '<td><span class="badge '+lobC+'">'+(r.lob==='GUARDIAN'?'GLG':'ALV')+'</span></td>'+
+      '<td><div style="font-size:11px">'+r.rep+'</div><div style="font-size:9px;color:#4a5a72">'+team+'</div></td>'+
+      '<td><span class="badge '+dbStatusCls(r.status)+'">'+r.status+'</span></td>'+
+      '<td><span class="badge bk">'+r.freq+'</span></td>'+
+      '<td style="font-family:DM Mono,monospace;color:'+(r.cleared>=r.thresh?'#00d48a':r.cleared>0?'#f59e0b':'#4a5a72')+'">'+r.cleared+'/'+r.thresh+'</td>'+
+      '<td>'+pmtDots(r)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;'+nc+'">'+r.nsf+'</td>'+
+      '<td style="font-family:DM Mono,monospace;white-space:nowrap">'+(r.phone||'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.pmt?'$'+r.pmt.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}):'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.debt?'$'+r.debt.toLocaleString():'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.fp_cleared||'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.next_pmt||'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.enrolled||'—')+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+document.addEventListener('DOMContentLoaded',function(){
+  initSelects();
+  renderOverview();
+});
+
+</script>
+</body>
+</html>+commPerFileVal.toLocaleString()+' avg debt &times; '+(rate*100).toFixed(1)+'%</div>'+
     '</div>';
   } else {
     var rc=retColor(c.cur_ret);

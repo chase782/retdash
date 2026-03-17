@@ -1,0 +1,769 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>BDS Retention & Commission Intelligence</title>
+<link href="https://fonts.googleapis.com/css2?family=DM+Sans:wght@300;400;500;600;700&family=DM+Mono:wght@400;500&family=Barlow+Condensed:wght@500;600;700;800&display=swap" rel="stylesheet">
+<style>
+:root{--bg:#06080f;--surface:#0d1117;--surface2:#141a24;--surface3:#1c2535;--border:#1e2d42;--border2:#243447;--text:#e8edf5;--text-dim:#8a9bb5;--text-dimmer:#4a5a72;--blue:#4d8fff;--green:#00d48a;--amber:#f59e0b;--red:#ff3d5a;--cyan:#22d3ee}
+*,*::before,*::after{box-sizing:border-box;margin:0;padding:0}
+html,body{height:100%;background:var(--bg);color:var(--text);font-family:DM Sans,sans-serif;font-size:13px;overflow-x:hidden}
+.mono{font-family:DM Mono,monospace}
+.header{display:flex;align-items:center;gap:12px;padding:0 20px;height:52px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:0;z-index:100}
+.logo-wrap{display:flex;align-items:center;gap:10px;flex-shrink:0;cursor:pointer}
+.logo-icon{width:34px;height:34px;background:linear-gradient(135deg,#1a56db,#0ea5e9);border-radius:8px;display:flex;align-items:center;justify-content:center;font-family:Barlow Condensed,sans-serif;font-weight:800;font-size:14px;color:#fff}
+.logo-text{font-family:Barlow Condensed,sans-serif;font-weight:700;font-size:16px;letter-spacing:.3px;line-height:1.1}
+.logo-sub{font-size:9px;color:var(--text-dimmer);font-weight:400;letter-spacing:1px;text-transform:uppercase}
+.hdiv{width:1px;height:28px;background:var(--border);margin:0 4px}
+.hfilters{display:flex;align-items:center;gap:8px;flex:1;flex-wrap:wrap}
+.hlabel{font-size:10px;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:.8px;white-space:nowrap;margin-right:2px}
+.hselect,.sel{appearance:none;background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:DM Sans,sans-serif;font-size:12px;padding:5px 24px 5px 10px;border-radius:6px;cursor:pointer;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' width='10' height='6'%3E%3Cpath d='M0 0l5 6 5-6z' fill='%234a5a72'/%3E%3C/svg%3E");background-repeat:no-repeat;background-position:right 8px center}
+.hselect:focus,.sel:focus{outline:none;border-color:var(--blue)}
+.hdate{font-family:DM Mono,monospace;font-size:11px;color:var(--text-dim);background:var(--surface2);border:1px solid var(--border);padding:4px 10px;border-radius:6px;margin-left:auto}
+.tabs-bar{display:flex;padding:0 20px;background:var(--surface);border-bottom:1px solid var(--border);position:sticky;top:52px;z-index:99}
+.tab{padding:12px 18px;font-size:12px;font-weight:500;color:var(--text-dim);cursor:pointer;border:none;background:none;border-bottom:2px solid transparent;margin-bottom:-1px;transition:color .15s,border-color .15s;white-space:nowrap;letter-spacing:.3px}
+.tab:hover{color:var(--text)}
+.tab.active{color:var(--blue);border-bottom-color:var(--blue);font-weight:600}
+.page{display:none;padding:20px}
+.page.active{display:block}
+.section-row{display:flex;align-items:center;justify-content:space-between;margin-bottom:12px}
+.section-label{font-family:Barlow Condensed,sans-serif;font-size:14px;font-weight:700;color:var(--text-dim);text-transform:uppercase;letter-spacing:1.5px}
+.cards-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:12px;margin-bottom:20px}
+.cohort-card{background:var(--surface);border-radius:10px;padding:14px}
+.cs-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:14px}
+.cs-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:20px}
+.divider{display:flex;align-items:center;gap:12px;margin-bottom:16px}
+.divider-line{height:1px;flex:1;background:var(--border)}
+.divider-text{font-size:10px;color:var(--text-dimmer);font-family:DM Mono,monospace;text-transform:uppercase;letter-spacing:1px;white-space:nowrap}
+.march-banner{background:var(--surface);border:1px solid var(--border);border-top:2px solid var(--cyan);border-radius:10px;padding:20px 24px;margin-bottom:20px;display:none;align-items:center;gap:0}
+.forecast-grid{display:grid;grid-template-columns:1fr 1fr;gap:12px;margin-bottom:20px}
+.forecast-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px}
+.fc-title{font-size:11px;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:.8px;margin-bottom:12px}
+.fc-row{display:flex;align-items:center;justify-content:space-between;padding:8px 0;border-bottom:1px solid var(--border)}
+.fc-row:last-child{border-bottom:none}
+.fc-month{font-size:12px;font-weight:500}
+.fc-sub{font-size:10px;color:var(--text-dimmer);margin-top:2px;font-family:DM Mono,monospace}
+.fc-vals{text-align:right}
+.fc-ret{font-family:Barlow Condensed,sans-serif;font-size:18px;font-weight:700}
+.fc-comm{font-size:10px;color:var(--text-dimmer);font-family:DM Mono,monospace;margin-top:2px}
+.chart-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 20px;margin-bottom:20px}
+.chart-wrap{position:relative;height:160px;margin-top:12px}
+.tier-section{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px}
+.alert{display:flex;gap:12px;padding:12px 16px;border-radius:8px;border:1px solid rgba(245,158,11,.3);border-left:3px solid var(--amber);background:rgba(245,158,11,.05);margin-bottom:16px;align-items:flex-start}
+.tbl-card{background:var(--surface);border:1px solid var(--border);border-radius:10px;overflow:hidden;margin-bottom:20px}
+.tbl-toolbar{display:flex;align-items:center;justify-content:space-between;padding:14px 16px;border-bottom:1px solid var(--border);gap:12px;flex-wrap:wrap}
+.tbl-title{font-family:Barlow Condensed,sans-serif;font-size:16px;font-weight:700;letter-spacing:.3px}
+.tbl-count{font-size:11px;color:var(--text-dimmer);margin-top:1px;font-family:DM Mono,monospace}
+.filters{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+.si{background:var(--surface2);border:1px solid var(--border2);color:var(--text);font-family:DM Sans,sans-serif;font-size:12px;padding:6px 10px;border-radius:6px;outline:none;width:200px}
+.si:focus{border-color:var(--blue)}
+.si::placeholder{color:var(--text-dimmer)}
+.tbl-scroll{overflow-x:auto}
+table{width:100%;border-collapse:collapse}
+th{font-size:10px;font-weight:600;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:.7px;padding:10px 12px;text-align:left;background:var(--surface2);border-bottom:1px solid var(--border);white-space:nowrap}
+td{padding:9px 12px;border-bottom:1px solid var(--border);font-size:12px;vertical-align:middle}
+tr:last-child td{border-bottom:none}
+tr:hover td{background:rgba(255,255,255,.02)}
+.rank{display:inline-flex;align-items:center;justify-content:center;font-family:DM Mono,monospace;font-size:11px;font-weight:700;padding:2px 7px;border-radius:4px;min-width:36px;white-space:nowrap}
+.rank-Ap{background:rgba(0,212,138,.2);color:#00d48a;border:1px solid rgba(0,212,138,.35)}
+.rank-A{background:rgba(0,212,138,.15);color:#00d48a;border:1px solid rgba(0,212,138,.25)}
+.rank-Am{background:rgba(0,212,138,.1);color:#00c47e;border:1px solid rgba(0,212,138,.18)}
+.rank-Bp{background:rgba(77,143,255,.18);color:#4d8fff;border:1px solid rgba(77,143,255,.3)}
+.rank-B{background:rgba(77,143,255,.13);color:#4d8fff;border:1px solid rgba(77,143,255,.22)}
+.rank-Bm{background:rgba(77,143,255,.1);color:#6b9fff;border:1px solid rgba(77,143,255,.16)}
+.rank-Cp{background:rgba(34,211,238,.15);color:#22d3ee;border:1px solid rgba(34,211,238,.25)}
+.rank-C{background:rgba(34,211,238,.1);color:#22d3ee;border:1px solid rgba(34,211,238,.18)}
+.rank-Cm{background:rgba(34,211,238,.07);color:#4bcfea;border:1px solid rgba(34,211,238,.12)}
+.rank-Dp{background:rgba(245,158,11,.15);color:#f59e0b;border:1px solid rgba(245,158,11,.25)}
+.rank-D{background:rgba(245,158,11,.1);color:#f59e0b;border:1px solid rgba(245,158,11,.18)}
+.rank-Dm{background:rgba(245,158,11,.07);color:#d97706;border:1px solid rgba(245,158,11,.12)}
+.rank-Fp{background:rgba(255,61,90,.15);color:#ff3d5a;border:1px solid rgba(255,61,90,.25)}
+.rank-F{background:rgba(255,61,90,.1);color:#ff3d5a;border:1px solid rgba(255,61,90,.18)}
+.rank-Fm{background:rgba(255,61,90,.07);color:#cc3048;border:1px solid rgba(255,61,90,.12)}
+.badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:4px;font-size:10px;font-weight:600;white-space:nowrap}
+.bg{background:rgba(77,143,255,.15);color:#4d8fff}
+.ba{background:rgba(0,212,138,.12);color:#00d48a}
+.by{background:rgba(245,158,11,.12);color:#f59e0b}
+.br{background:rgba(255,61,90,.1);color:#ff3d5a}
+.bk{background:rgba(138,143,168,.1);color:#8a8fa8}
+.pager{display:flex;align-items:center;justify-content:space-between;padding:10px 16px;border-top:1px solid var(--border);font-size:12px;color:var(--text-dimmer)}
+.pbtn{background:var(--surface2);border:1px solid var(--border2);color:var(--text-dim);padding:5px 12px;border-radius:6px;cursor:pointer;font-size:12px;font-family:DM Sans,sans-serif;transition:border-color .15s}
+.pbtn:hover{border-color:var(--blue);color:var(--text)}
+.pbtn:disabled{opacity:.35;cursor:not-allowed}
+::-webkit-scrollbar{width:6px;height:6px}
+::-webkit-scrollbar-track{background:transparent}
+::-webkit-scrollbar-thumb{background:var(--border2);border-radius:3px}
+</style>
+</head>
+<body>
+<header class="header">
+  <div class="logo-wrap" onclick="document.querySelectorAll('.tab')[0].click()" title="Home">
+    <div class="logo-icon">BDS</div>
+    <div><div class="logo-text">Better Debt Solutions</div><div class="logo-sub">Retention Intelligence</div></div>
+  </div>
+  <div class="hdiv"></div>
+  <div class="hfilters">
+    <span class="hlabel">LOB</span>
+    <select class="hselect" id="hLob"><option value="ALL">All LOBs</option><option value="GUARDIAN">Guardian</option><option value="ALLEVIATE">Alleviate</option></select>
+    <span class="hlabel" style="margin-left:6px">Team</span>
+    <select class="hselect" id="hTeam"><option value="ALL">All Teams</option></select>
+  </div>
+  <div class="hdate">Mar 16, 2026</div>
+</header>
+<nav class="tabs-bar">
+  <button class="tab active" onclick="switchTab('overview',this)">Overview</button>
+  <button class="tab" onclick="switchTab('reps',this)">Rep Performance</button>
+  <button class="tab" onclick="switchTab('atrisk',this)">At-Risk Clients</button>
+  <button class="tab" onclick="switchTab('clientdb',this)">Client Database</button>
+</nav>
+
+<!-- OVERVIEW -->
+<div id="tab-overview" class="page active">
+  <div class="alert">
+    <div style="font-size:16px">&#9888;</div>
+    <div><div style="font-size:12px;font-weight:600;color:var(--amber);margin-bottom:2px">LOOK-BACK CLAWBACKS &mdash; PAYMENTS AT RISK</div>
+    <div style="font-size:11px;color:var(--text-dim)">Dec 2025 (eval Apr): GLG <strong>75.1%</strong> &minus;5% &middot; ALV <strong>72.9%</strong> &minus;5% &nbsp;&middot;&nbsp; Jan 2026 (eval May): GLG <strong>77.5%</strong> &minus;2.5% &middot; ALV <strong>75.2%</strong> &minus;5%</div></div>
+  </div>
+
+  <!-- Tier Table -->
+  <div class="tier-section" style="margin-bottom:20px">
+    <div style="padding:12px 20px 10px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:12px">
+      <span style="font-size:11px;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:1px;font-family:DM Mono,monospace">Retention Tier Reference</span>
+      <span style="font-size:10px;color:var(--text-dimmer);font-family:DM Mono,monospace">Formula: 1 &minus; (Failed &divide; Paid)</span>
+    </div>
+    <table style="width:100%;border-collapse:collapse">
+      <thead><tr>
+        <th style="padding:9px 20px;text-align:left;font-size:10px;font-weight:600;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:.7px;background:var(--surface2);border-bottom:1px solid var(--border)">Retention Range</th>
+        <th style="padding:9px 20px;text-align:left;font-size:10px;font-weight:600;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:.7px;background:var(--surface2);border-bottom:1px solid var(--border)">Commission Adjustment</th>
+      </tr></thead>
+      <tbody>
+        <tr style="background:rgba(0,212,138,.06)"><td style="padding:10px 20px;border-bottom:1px solid var(--border);font-family:DM Mono,monospace;font-size:13px">85%+</td><td style="padding:10px 20px;border-bottom:1px solid var(--border)"><span style="font-family:Barlow Condensed,sans-serif;font-size:17px;font-weight:700;color:#00d48a">+5%</span><span style="font-size:12px;color:var(--text-dim);margin-left:8px">Retention Bonus</span></td></tr>
+        <tr style="background:rgba(0,212,138,.03)"><td style="padding:10px 20px;border-bottom:1px solid var(--border);font-family:DM Mono,monospace;font-size:13px">82.5% &ndash; 84.9%</td><td style="padding:10px 20px;border-bottom:1px solid var(--border)"><span style="font-family:Barlow Condensed,sans-serif;font-size:17px;font-weight:700;color:#6ee7b7">+2.5%</span><span style="font-size:12px;color:var(--text-dim);margin-left:8px">Retention Bonus</span></td></tr>
+        <tr><td style="padding:10px 20px;border-bottom:1px solid var(--border);font-family:DM Mono,monospace;font-size:13px">80% &ndash; 82.49%</td><td style="padding:10px 20px;border-bottom:1px solid var(--border)"><span style="font-family:Barlow Condensed,sans-serif;font-size:17px;font-weight:700;color:var(--text-dim)">0%</span><span style="font-size:12px;color:var(--text-dim);margin-left:8px">No Bonus / No Reduction</span></td></tr>
+        <tr style="background:rgba(245,158,11,.03)"><td style="padding:10px 20px;border-bottom:1px solid var(--border);font-family:DM Mono,monospace;font-size:13px">77.5% &ndash; 79.9%</td><td style="padding:10px 20px;border-bottom:1px solid var(--border)"><span style="font-family:Barlow Condensed,sans-serif;font-size:17px;font-weight:700;color:var(--amber)">-2.5%</span><span style="font-size:12px;color:var(--text-dim);margin-left:8px">Reduction</span></td></tr>
+        <tr style="background:rgba(245,158,11,.05)"><td style="padding:10px 20px;border-bottom:1px solid var(--border);font-family:DM Mono,monospace;font-size:13px">70% &ndash; 77.4%</td><td style="padding:10px 20px;border-bottom:1px solid var(--border)"><span style="font-family:Barlow Condensed,sans-serif;font-size:17px;font-weight:700;color:#fb923c">-5%</span><span style="font-size:12px;color:var(--text-dim);margin-left:8px">Reduction</span></td></tr>
+        <tr style="background:rgba(255,61,90,.04)"><td style="padding:10px 20px;border-bottom:1px solid var(--border);font-family:DM Mono,monospace;font-size:13px">65% &ndash; 69.9%</td><td style="padding:10px 20px;border-bottom:1px solid var(--border)"><span style="font-family:Barlow Condensed,sans-serif;font-size:17px;font-weight:700;color:var(--red)">-10%</span><span style="font-size:12px;color:var(--text-dim);margin-left:8px">Reduction</span></td></tr>
+        <tr style="background:rgba(255,61,90,.07)"><td style="padding:10px 20px;font-family:DM Mono,monospace;font-size:13px">60% &ndash; 64.9%</td><td style="padding:10px 20px"><span style="font-family:Barlow Condensed,sans-serif;font-size:17px;font-weight:700;color:#f43f5e">-12%</span><span style="font-size:12px;color:var(--text-dim);margin-left:8px">Reduction</span></td></tr>
+      </tbody>
+    </table>
+  </div>
+
+  <!-- Current Standing -->
+  <div class="section-row"><div class="section-label">Current Standing <span id="achNote" style="font-size:10px;color:var(--text-dimmer);font-weight:400;text-transform:none;letter-spacing:0;font-family:DM Mono,monospace"></span></div></div>
+  <div class="cs-grid" id="csGrid"></div>
+
+  <div class="divider"><div class="divider-line"></div><div class="divider-text">Projection &mdash; Where Cohorts Will Land</div><div class="divider-line"></div></div>
+
+  <!-- Debt Clearance Projection -->
+  <div id="debtProjBanner" style="background:var(--surface);border:1px solid var(--border);border-radius:10px;padding:16px 24px;margin-bottom:20px;display:none">
+    <div style="font-size:10px;color:var(--text-dimmer);text-transform:uppercase;letter-spacing:1px;font-family:DM Mono,monospace;margin-bottom:12px">March 2026 &mdash; Total Projected Debt Cleared</div>
+    <div style="display:flex;align-items:center;gap:0" id="debtProjInner"></div>
+  </div>
+
+  <!-- March Banner -->
+  <div class="march-banner" id="marchBanner"></div>
+
+  <!-- GLG Cards -->
+  <div class="section-row"><div class="section-label">Guardian (GLG) &mdash; Last 5 Months</div></div>
+  <div class="cards-grid" id="glgCards"></div>
+
+  <!-- ALV Cards -->
+  <div class="section-row"><div class="section-label">Alleviate Financial &mdash; Last 5 Months</div></div>
+  <div class="cards-grid" id="alvCards"></div>
+
+  <!-- Forecast -->
+  <div class="forecast-grid">
+    <div class="forecast-card">
+      <div class="fc-title"><span style="color:var(--blue)">GLG</span> Guardian Commission Forecast &nbsp;<span style="font-size:10px;color:var(--text-dimmer)">@ 7.6% rate</span></div>
+      <div id="glgFc"></div>
+    </div>
+    <div class="forecast-card">
+      <div class="fc-title"><span style="color:var(--green)">ALV</span> Alleviate Commission Forecast &nbsp;<span style="font-size:10px;color:var(--text-dimmer)">@ 8.5% rate</span></div>
+      <div id="alvFc"></div>
+    </div>
+  </div>
+
+  <!-- Monthly Chart -->
+  <div class="chart-section">
+    <div style="display:flex;align-items:center;justify-content:space-between">
+      <div><div style="font-family:Barlow Condensed,sans-serif;font-size:16px;font-weight:700">Monthly Payable Files</div><div style="font-size:11px;color:var(--text-dimmer);margin-top:2px">Commission calculation basis per month</div></div>
+      <div style="display:flex;gap:16px;font-size:11px;color:var(--text-dimmer)">
+        <span><span style="display:inline-block;width:10px;height:10px;background:var(--blue);border-radius:2px;margin-right:4px;vertical-align:middle"></span>Guardian</span>
+        <span><span style="display:inline-block;width:10px;height:10px;background:var(--green);border-radius:2px;margin-right:4px;vertical-align:middle"></span>Alleviate</span>
+      </div>
+    </div>
+    <div class="chart-wrap"><canvas id="monthlyChart"></canvas></div>
+  </div>
+</div>
+
+<!-- REP PERFORMANCE -->
+<div id="tab-reps" class="page">
+  <div class="tbl-card">
+    <div class="tbl-toolbar">
+      <div><div class="tbl-title">Rep Performance</div><div class="tbl-count" id="repCount"></div></div>
+      <div class="filters">
+        <input class="si" type="text" placeholder="Search rep..." id="repQ" oninput="rpg=0;renderReps()">
+        <select class="sel" id="repLob" onchange="rpg=0;renderReps()"><option value="ALL">All LOBs</option><option value="GUARDIAN">Guardian</option><option value="ALLEVIATE">Alleviate</option></select>
+        <select class="sel" id="repTeam" onchange="rpg=0;renderReps()"><option value="ALL">All Teams</option></select>
+        <select class="sel" id="repSort" onchange="rpg=0;renderReps()"><option value="worst">Worst Retention</option><option value="best">Best Retention</option><option value="files">Most Files</option><option value="commission">Highest Commission</option><option value="name">Name A-Z</option></select>
+      </div>
+    </div>
+    <div class="tbl-scroll"><table><thead><tr><th>Rep</th><th>Team</th><th>Files</th><th>Passed</th><th>Failed</th><th>Overall Ret %</th><th>LB Adj</th><th>GLG Ret.</th><th>ALV Ret.</th><th>Est. Commission</th></tr></thead><tbody id="repBody"></tbody></table></div>
+    <div class="pager"><button class="pbtn" id="repPrev" onclick="rpg--;renderReps()">&larr; Prev</button><div id="repPgInfo" style="font-size:12px"></div><button class="pbtn" id="repNext" onclick="rpg++;renderReps()">Next &rarr;</button></div>
+  </div>
+</div>
+
+<!-- AT-RISK -->
+<div id="tab-atrisk" class="page">
+  <div class="tbl-card">
+    <div class="tbl-toolbar">
+      <div><div class="tbl-title">At-Risk Client Call List</div><div class="tbl-count" id="riskCount"></div></div>
+      <div class="filters">
+        <input class="si" type="text" placeholder="Name, rep, phone..." id="riskQ" oninput="rkpg=0;renderRisk()">
+        <select class="sel" id="riskLob" onchange="rkpg=0;renderRisk()"><option value="ALL">All LOBs</option><option value="GUARDIAN">Guardian</option><option value="ALLEVIATE">Alleviate</option></select>
+        <select class="sel" id="riskLBMonth" onchange="rkpg=0;renderRisk()" style="min-width:180px"><option value="ALL">All LB Months</option></select>
+        <select class="sel" id="riskTeam" onchange="rkpg=0;renderRisk()"><option value="ALL">All Teams</option></select>
+        <select class="sel" id="riskRank" onchange="rkpg=0;renderRisk()"><option value="ALL">All Grades</option><option value="A+">A+</option><option value="A">A</option><option value="A-">A-</option><option value="B+">B+</option><option value="B">B</option><option value="B-">B-</option><option value="C+">C+</option><option value="C">C</option><option value="C-">C-</option><option value="D+">D+ &amp; below</option><option value="F">F grades</option></select>
+        <select class="sel" id="riskSort" onchange="rkpg=0;renderRisk()"><option value="score_desc">Best Grade First</option><option value="score_asc">Worst Grade First</option><option value="pmts">Payments Needed</option><option value="debt">Highest Debt</option><option value="recent">Most Recent</option></select>
+      </div>
+    </div>
+    <div class="tbl-scroll"><table><thead><tr><th>Grade</th><th>Client</th><th>LOB</th><th>Rep / Team</th><th>Cohort</th><th>Freq</th><th>Pmts</th><th>Needed</th><th>NSFs</th><th>Phone</th><th>Mo. Pmt</th><th>Orig Debt</th><th>Window</th><th>Notes</th></tr></thead><tbody id="riskBody"></tbody></table></div>
+    <div class="pager"><button class="pbtn" id="riskPrev" onclick="rkpg--;renderRisk()">&larr; Prev</button><div id="riskPgInfo" style="font-size:12px"></div><button class="pbtn" id="riskNext" onclick="rkpg++;renderRisk()">Next &rarr;</button></div>
+  </div>
+</div>
+
+<!-- CLIENT DB -->
+<div id="tab-clientdb" class="page">
+  <div class="tbl-card">
+    <div class="tbl-toolbar">
+      <div><div class="tbl-title">Client Database</div><div class="tbl-count" id="dbCount"></div></div>
+      <div class="filters">
+        <input class="si" type="text" placeholder="Name, phone, ID, rep..." id="dbQ" oninput="dbpg=0;renderDB()">
+        <select class="sel" id="dbLob" onchange="dbpg=0;renderDB()"><option value="ALL">All LOBs</option><option value="GUARDIAN">Guardian</option><option value="ALLEVIATE">Alleviate</option></select>
+        <select class="sel" id="dbTeam" onchange="dbpg=0;renderDB()"><option value="ALL">All Teams</option></select>
+        <select class="sel" id="dbStatus" onchange="dbpg=0;renderDB()"><option value="ALL">All Statuses</option><option value="Active - At Risk">At Risk</option><option value="Active - On Track">On Track</option><option value="NSF">NSF</option><option value="Potential Cancel">Potential Cancel</option><option value="Cancelled">Cancelled</option></select>
+        <select class="sel" id="dbSort" onchange="dbpg=0;renderDB()"><option value="status">Status Priority</option><option value="name">Name A-Z</option><option value="debt_desc">Highest Debt</option><option value="cleared_desc">Most Payments</option><option value="recent">Most Recent</option></select>
+      </div>
+    </div>
+    <div class="tbl-scroll"><table><thead><tr><th>Client</th><th>ID</th><th>LOB</th><th>Rep / Team</th><th>Status</th><th>Freq</th><th>Pmts</th><th>Timeline</th><th>NSFs</th><th>Phone</th><th>Mo. Pmt</th><th>Orig Debt</th><th>1st Cleared</th><th>Next Sched.</th><th>Enrolled</th></tr></thead><tbody id="dbBody"></tbody></table></div>
+    <div class="pager"><button class="pbtn" id="dbPrev" onclick="dbpg--;renderDB()">&larr; Prev</button><div id="dbPgInfo" style="font-size:12px"></div><button class="pbtn" id="dbNext" onclick="dbpg++;renderDB()">Next &rarr;</button></div>
+  </div>
+</div>
+
+<!-- DATA (not parsed as JS) -->
+<!-- AR data loaded via fetch -->
+<!-- DB data loaded via fetch -->
+
+<script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.0/dist/chart.umd.min.js"></script>
+<script>
+const COHORT=[{"payable_month":"2025-11","month_label":"Nov 2025","lob":"GUARDIAN","payable_files":1206,"passes":1205,"fails":325,"already_passed":1205,"already_failed":325,"on_pace":0,"at_risk_active":0,"cur_ret":73.0,"cur_adj":-5.0,"proj_ret":73.0,"proj_adj":-5.0,"est_commission":2988310.196,"eval_month":"Mar 2026","window_closed":true,"days_left":0,"incomplete":false,"source":"Pay report (2026-02)"},{"payable_month":"2025-11","month_label":"Nov 2025","lob":"ALLEVIATE","payable_files":2085,"passes":2084,"fails":598,"already_passed":2084,"already_failed":598,"on_pace":0,"at_risk_active":0,"cur_ret":71.3,"cur_adj":-5.0,"proj_ret":71.3,"proj_adj":-5.0,"est_commission":5832764.430000001,"eval_month":"Mar 2026","window_closed":true,"days_left":0,"incomplete":false,"source":"Pay report (2026-02)"},{"payable_month":"2025-12","month_label":"Dec 2025","lob":"GUARDIAN","payable_files":1097,"passes":910,"fails":148,"already_passed":910,"already_failed":148,"on_pace":3,"at_risk_active":79,"cur_ret":75.05,"cur_adj":-5.0,"proj_ret":75.14,"proj_adj":-5.0,"est_commission":2716240.0,"eval_month":"Apr 2026","window_closed":false,"days_left":16,"incomplete":true,"source":"Projected (Tableau)"},{"payable_month":"2025-12","month_label":"Dec 2025","lob":"ALLEVIATE","payable_files":1893,"passes":1513,"fails":212,"already_passed":1513,"already_failed":212,"on_pace":8,"at_risk_active":198,"cur_ret":72.9,"cur_adj":-5.0,"proj_ret":73.04,"proj_adj":-5.0,"est_commission":5337411.970000001,"eval_month":"Apr 2026","window_closed":false,"days_left":16,"incomplete":true,"source":"Projected (Tableau)"},{"payable_month":"2026-01","month_label":"Jan 2026","lob":"GUARDIAN","payable_files":1048,"passes":899,"fails":84,"already_passed":899,"already_failed":84,"on_pace":14,"at_risk_active":118,"cur_ret":77.53,"cur_adj":-2.5,"proj_ret":77.88,"proj_adj":-2.5,"est_commission":2615160.0,"eval_month":"May 2026","window_closed":false,"days_left":46,"incomplete":true,"source":"Projected (Tableau)"},{"payable_month":"2026-01","month_label":"Jan 2026","lob":"ALLEVIATE","payable_files":1837,"passes":1462,"fails":140,"already_passed":1462,"already_failed":140,"on_pace":66,"at_risk_active":223,"cur_ret":75.17,"cur_adj":-5.0,"proj_ret":76.24,"proj_adj":-5.0,"est_commission":5252150.0,"eval_month":"May 2026","window_closed":false,"days_left":46,"incomplete":true,"source":"Projected (Tableau)"},{"payable_month":"2026-02","month_label":"Feb 2026","lob":"GUARDIAN","payable_files":1015,"passes":948,"fails":18,"already_passed":948,"already_failed":18,"on_pace":1,"at_risk_active":117,"cur_ret":85.76,"cur_adj":5.0,"proj_ret":85.77,"proj_adj":5.0,"est_commission":2530800.0,"eval_month":"Jun 2026","window_closed":false,"days_left":77,"incomplete":true,"source":"Projected (Tableau)"},{"payable_month":"2026-02","month_label":"Feb 2026","lob":"ALLEVIATE","payable_files":1816,"passes":1632,"fails":7,"already_passed":1632,"already_failed":7,"on_pace":46,"at_risk_active":173,"cur_ret":88.97,"cur_adj":5.0,"proj_ret":89.27,"proj_adj":5.0,"est_commission":5032316.54,"eval_month":"Jun 2026","window_closed":false,"days_left":77,"incomplete":true,"source":"Projected (Tableau)"},{"payable_month":"2026-03","month_label":"Mar 2026","lob":"GUARDIAN","payable_files":554,"passes":524,"fails":0,"already_passed":524,"already_failed":0,"on_pace":2,"at_risk_active":28,"cur_ret":94.66,"cur_adj":5.0,"proj_ret":94.68,"proj_adj":5.0,"est_commission":1276980.0,"eval_month":"Jul 2026","window_closed":false,"days_left":107,"incomplete":true,"source":"Projected (Tableau)"},{"payable_month":"2026-03","month_label":"Mar 2026","lob":"ALLEVIATE","payable_files":820,"passes":771,"fails":0,"already_passed":771,"already_failed":0,"on_pace":11,"at_risk_active":38,"cur_ret":95.07,"cur_adj":5.0,"proj_ret":95.14,"proj_adj":5.0,"est_commission":2206738.0,"eval_month":"Jul 2026","window_closed":false,"days_left":107,"incomplete":true,"source":"Projected (Tableau)"}];
+const MONTHLY=[{"month":"2025-05","month_label":"May 2025","lob":"GUARDIAN","files":1108,"commission":2601480.0},{"month":"2025-05","month_label":"May 2025","lob":"ALLEVIATE","files":1500,"commission":3864100.0000000005},{"month":"2025-06","month_label":"Jun 2025","lob":"GUARDIAN","files":1110,"commission":2596160.0},{"month":"2025-06","month_label":"Jun 2025","lob":"ALLEVIATE","files":1488,"commission":3910850.0000000005},{"month":"2025-07","month_label":"Jul 2025","lob":"GUARDIAN","files":1123,"commission":2625407.0039999997},{"month":"2025-07","month_label":"Jul 2025","lob":"ALLEVIATE","files":1568,"commission":4225318.465},{"month":"2025-08","month_label":"Aug 2025","lob":"GUARDIAN","files":1121,"commission":2619994.512},{"month":"2025-08","month_label":"Aug 2025","lob":"ALLEVIATE","files":1743,"commission":4581488.78},{"month":"2025-09","month_label":"Sep 2025","lob":"GUARDIAN","files":1287,"commission":3251306.752},{"month":"2025-09","month_label":"Sep 2025","lob":"ALLEVIATE","files":2224,"commission":6207271.625},{"month":"2025-10","month_label":"Oct 2025","lob":"GUARDIAN","files":1331,"commission":3308205.064},{"month":"2025-10","month_label":"Oct 2025","lob":"ALLEVIATE","files":2380,"commission":6656480.5600000005},{"month":"2025-11","month_label":"Nov 2025","lob":"GUARDIAN","files":1206,"commission":2988310.196},{"month":"2025-11","month_label":"Nov 2025","lob":"ALLEVIATE","files":2085,"commission":5832764.430000001},{"month":"2025-12","month_label":"Dec 2025","lob":"GUARDIAN","files":1097,"commission":2716240.0},{"month":"2025-12","month_label":"Dec 2025","lob":"ALLEVIATE","files":1893,"commission":5337411.970000001},{"month":"2026-01","month_label":"Jan 2026","lob":"GUARDIAN","files":1048,"commission":2615160.0},{"month":"2026-01","month_label":"Jan 2026","lob":"ALLEVIATE","files":1837,"commission":5252150.0},{"month":"2026-02","month_label":"Feb 2026","lob":"GUARDIAN","files":1015,"commission":2530800.0},{"month":"2026-02","month_label":"Feb 2026","lob":"ALLEVIATE","files":1816,"commission":5032316.54}];
+const REPS=[{"rep":"Taylor Duran","total_files":4,"total_passes":2,"total_fails":2,"overall_ret":0.0,"overall_adj":-12.0,"commission":24103.0,"guardian_files":0,"guardian_ret":null,"alleviate_files":4,"alleviate_ret":0.0},{"rep":"Carlos Soto","total_files":14,"total_passes":8,"total_fails":6,"overall_ret":25.0,"overall_adj":-12.0,"commission":36058.0,"guardian_files":4,"guardian_ret":0.0,"alleviate_files":10,"alleviate_ret":33.3},{"rep":"Jake Pasimio","total_files":7,"total_passes":4,"total_fails":3,"overall_ret":25.0,"overall_adj":-12.0,"commission":11087.0,"guardian_files":4,"guardian_ret":66.7,"alleviate_files":3,"alleviate_ret":-100.0},{"rep":"Ann Llano","total_files":13,"total_passes":8,"total_fails":5,"overall_ret":37.5,"overall_adj":-12.0,"commission":28019.0,"guardian_files":3,"guardian_ret":50.0,"alleviate_files":10,"alleviate_ret":33.3},{"rep":"Nicholas Cervantes","total_files":19,"total_passes":12,"total_fails":7,"overall_ret":41.7,"overall_adj":-12.0,"commission":37148.0,"guardian_files":9,"guardian_ret":50.0,"alleviate_files":10,"alleviate_ret":33.3},{"rep":"Cody King","total_files":11,"total_passes":7,"total_fails":4,"overall_ret":42.9,"overall_adj":-12.0,"commission":36146.0,"guardian_files":2,"guardian_ret":100.0,"alleviate_files":9,"alleviate_ret":20.0},{"rep":"Karl Pina","total_files":53,"total_passes":34,"total_fails":19,"overall_ret":44.1,"overall_adj":-12.0,"commission":145018.0,"guardian_files":17,"guardian_ret":45.5,"alleviate_files":36,"alleviate_ret":43.5},{"rep":"Juan Cacosso","total_files":3,"total_passes":2,"total_fails":1,"overall_ret":50.0,"overall_adj":-12.0,"commission":5662.0,"guardian_files":1,"guardian_ret":100.0,"alleviate_files":2,"alleviate_ret":0.0},{"rep":"Pep Miro","total_files":12,"total_passes":8,"total_fails":4,"overall_ret":50.0,"overall_adj":-12.0,"commission":27216.0,"guardian_files":1,"guardian_ret":100.0,"alleviate_files":11,"alleviate_ret":42.9},{"rep":"Rodrigo Bravo","total_files":15,"total_passes":10,"total_fails":5,"overall_ret":50.0,"overall_adj":-12.0,"commission":43050.0,"guardian_files":5,"guardian_ret":100.0,"alleviate_files":10,"alleviate_ret":0.0},{"rep":"Gonzalo Bello","total_files":22,"total_passes":15,"total_fails":7,"overall_ret":53.3,"overall_adj":-12.0,"commission":38833.0,"guardian_files":6,"guardian_ret":50.0,"alleviate_files":16,"alleviate_ret":54.5},{"rep":"Amber Bastro","total_files":104,"total_passes":71,"total_fails":33,"overall_ret":53.5,"overall_adj":-12.0,"commission":246579.0,"guardian_files":35,"guardian_ret":65.4,"alleviate_files":69,"alleviate_ret":46.7},{"rep":"Heather Melendez","total_files":13,"total_passes":9,"total_fails":4,"overall_ret":55.6,"overall_adj":-12.0,"commission":61298.0,"guardian_files":5,"guardian_ret":75.0,"alleviate_files":8,"alleviate_ret":40.0},{"rep":"Alexis Gatica","total_files":36,"total_passes":25,"total_fails":11,"overall_ret":56.0,"overall_adj":-12.0,"commission":77517.0,"guardian_files":9,"guardian_ret":100.0,"alleviate_files":27,"alleviate_ret":31.2},{"rep":"Rose Bafaiz","total_files":72,"total_passes":50,"total_fails":22,"overall_ret":56.0,"overall_adj":-12.0,"commission":186890.0,"guardian_files":14,"guardian_ret":25.0,"alleviate_files":58,"alleviate_ret":61.9},{"rep":"Art Davison","total_files":60,"total_passes":42,"total_fails":18,"overall_ret":57.1,"overall_adj":-12.0,"commission":160946.0,"guardian_files":19,"guardian_ret":64.3,"alleviate_files":41,"alleviate_ret":53.6},{"rep":"Tracy Neri","total_files":75,"total_passes":53,"total_fails":22,"overall_ret":58.5,"overall_adj":-12.0,"commission":238080.0,"guardian_files":29,"guardian_ret":73.9,"alleviate_files":46,"alleviate_ret":46.7},{"rep":"Moses Sanchez","total_files":82,"total_passes":58,"total_fails":24,"overall_ret":58.6,"overall_adj":-12.0,"commission":192419.0,"guardian_files":31,"guardian_ret":36.8,"alleviate_files":51,"alleviate_ret":69.2},{"rep":"Mason Bock","total_files":31,"total_passes":22,"total_fails":9,"overall_ret":59.1,"overall_adj":-12.0,"commission":89318.0,"guardian_files":11,"guardian_ret":16.7,"alleviate_files":20,"alleviate_ret":75.0},{"rep":"Michelle Rodriguez","total_files":38,"total_passes":27,"total_fails":11,"overall_ret":59.3,"overall_adj":-12.0,"commission":110455.0,"guardian_files":9,"guardian_ret":50.0,"alleviate_files":29,"alleviate_ret":61.9},{"rep":"Clint Sapowsky","total_files":28,"total_passes":20,"total_fails":8,"overall_ret":60.0,"overall_adj":-12.0,"commission":68336.0,"guardian_files":12,"guardian_ret":66.7,"alleviate_files":16,"alleviate_ret":54.5},{"rep":"Saif Hammad","total_files":78,"total_passes":56,"total_fails":22,"overall_ret":60.7,"overall_adj":-12.0,"commission":223057.0,"guardian_files":28,"guardian_ret":52.6,"alleviate_files":50,"alleviate_ret":64.9},{"rep":"Jace Foti","total_files":89,"total_passes":64,"total_fails":25,"overall_ret":60.9,"overall_adj":-12.0,"commission":265233.0,"guardian_files":35,"guardian_ret":79.3,"alleviate_files":54,"alleviate_ret":45.7},{"rep":"Charlie Awad","total_files":82,"total_passes":59,"total_fails":23,"overall_ret":61.0,"overall_adj":-12.0,"commission":194709.0,"guardian_files":20,"guardian_ret":66.7,"alleviate_files":62,"alleviate_ret":59.1},{"rep":"Monica Ruelas","total_files":90,"total_passes":65,"total_fails":25,"overall_ret":61.5,"overall_adj":-12.0,"commission":249076.0,"guardian_files":37,"guardian_ret":67.9,"alleviate_files":53,"alleviate_ret":56.8},{"rep":"Miles Herrera","total_files":121,"total_passes":88,"total_fails":33,"overall_ret":62.5,"overall_adj":-12.0,"commission":357786.0,"guardian_files":36,"guardian_ret":66.7,"alleviate_files":85,"alleviate_ret":60.7},{"rep":"Charles Dean","total_files":96,"total_passes":70,"total_fails":26,"overall_ret":62.9,"overall_adj":-12.0,"commission":262644.0,"guardian_files":36,"guardian_ret":83.9,"alleviate_files":60,"alleviate_ret":46.2},{"rep":"Saad Khalid","total_files":76,"total_passes":56,"total_fails":20,"overall_ret":64.3,"overall_adj":-12.0,"commission":195056.0,"guardian_files":23,"guardian_ret":64.7,"alleviate_files":53,"alleviate_ret":64.1},{"rep":"Star Alcala","total_files":107,"total_passes":79,"total_fails":28,"overall_ret":64.6,"overall_adj":-12.0,"commission":246227.0,"guardian_files":42,"guardian_ret":68.8,"alleviate_files":65,"alleviate_ret":61.7},{"rep":"Kerry Andrews","total_files":109,"total_passes":81,"total_fails":28,"overall_ret":65.4,"overall_adj":-10.0,"commission":316933.0,"guardian_files":38,"guardian_ret":53.8,"alleviate_files":71,"alleviate_ret":70.9},{"rep":"Cristobal Ochoa","total_files":43,"total_passes":32,"total_fails":11,"overall_ret":65.6,"overall_adj":-10.0,"commission":74887.0,"guardian_files":8,"guardian_ret":85.7,"alleviate_files":35,"alleviate_ret":60.0},{"rep":"Elvia Sanchez","total_files":47,"total_passes":35,"total_fails":12,"overall_ret":65.7,"overall_adj":-10.0,"commission":104538.0,"guardian_files":13,"guardian_ret":55.6,"alleviate_files":34,"alleviate_ret":69.2},{"rep":"Michael Dimaggio","total_files":79,"total_passes":59,"total_fails":20,"overall_ret":66.1,"overall_adj":-10.0,"commission":197042.0,"guardian_files":25,"guardian_ret":61.1,"alleviate_files":54,"alleviate_ret":68.3},{"rep":"Dahana Medina","total_files":40,"total_passes":30,"total_fails":10,"overall_ret":66.7,"overall_adj":-10.0,"commission":68366.0,"guardian_files":7,"guardian_ret":100.0,"alleviate_files":33,"alleviate_ret":56.5},{"rep":"Eric Gonzalez","total_files":76,"total_passes":57,"total_fails":19,"overall_ret":66.7,"overall_adj":-10.0,"commission":191443.0,"guardian_files":22,"guardian_ret":42.9,"alleviate_files":54,"alleviate_ret":74.4},{"rep":"Eli Riano","total_files":28,"total_passes":21,"total_fails":7,"overall_ret":66.7,"overall_adj":-10.0,"commission":63744.0,"guardian_files":10,"guardian_ret":88.9,"alleviate_files":18,"alleviate_ret":50.0},{"rep":"Christopher Haase","total_files":52,"total_passes":39,"total_fails":13,"overall_ret":66.7,"overall_adj":-10.0,"commission":120836.0,"guardian_files":23,"guardian_ret":78.9,"alleviate_files":29,"alleviate_ret":55.0},{"rep":"Jose Martinez","total_files":4,"total_passes":3,"total_fails":1,"overall_ret":66.7,"overall_adj":-10.0,"commission":9023.0,"guardian_files":4,"guardian_ret":66.7,"alleviate_files":0,"alleviate_ret":null},{"rep":"Rohan Madon","total_files":8,"total_passes":6,"total_fails":2,"overall_ret":66.7,"overall_adj":-10.0,"commission":16358.0,"guardian_files":4,"guardian_ret":66.7,"alleviate_files":4,"alleviate_ret":66.7},{"rep":"William Avila","total_files":36,"total_passes":27,"total_fails":9,"overall_ret":66.7,"overall_adj":-10.0,"commission":95200.0,"guardian_files":10,"guardian_ret":57.1,"alleviate_files":26,"alleviate_ret":70.0},{"rep":"Angelo Mendoza","total_files":78,"total_passes":59,"total_fails":19,"overall_ret":67.8,"overall_adj":-10.0,"commission":194978.0,"guardian_files":28,"guardian_ret":72.7,"alleviate_files":50,"alleviate_ret":64.9},{"rep":"Joe Chavez","total_files":37,"total_passes":28,"total_fails":9,"overall_ret":67.9,"overall_adj":-10.0,"commission":84359.0,"guardian_files":15,"guardian_ret":75.0,"alleviate_files":22,"alleviate_ret":62.5},{"rep":"Jason Moore","total_files":33,"total_passes":25,"total_fails":8,"overall_ret":68.0,"overall_adj":-10.0,"commission":88361.0,"guardian_files":11,"guardian_ret":62.5,"alleviate_files":22,"alleviate_ret":70.6},{"rep":"Bill Andrews","total_files":54,"total_passes":41,"total_fails":13,"overall_ret":68.3,"overall_adj":-10.0,"commission":156558.0,"guardian_files":18,"guardian_ret":87.5,"alleviate_files":36,"alleviate_ret":56.0},{"rep":"Berenice Castro","total_files":21,"total_passes":16,"total_fails":5,"overall_ret":68.8,"overall_adj":-10.0,"commission":48831.0,"guardian_files":5,"guardian_ret":100.0,"alleviate_files":16,"alleviate_ret":54.5},{"rep":"Mario Cabrera","total_files":68,"total_passes":52,"total_fails":16,"overall_ret":69.2,"overall_adj":-10.0,"commission":176872.0,"guardian_files":25,"guardian_ret":75.0,"alleviate_files":43,"alleviate_ret":65.6},{"rep":"Lonnie Watson","total_files":30,"total_passes":23,"total_fails":7,"overall_ret":69.6,"overall_adj":-10.0,"commission":82071.0,"guardian_files":15,"guardian_ret":63.6,"alleviate_files":15,"alleviate_ret":75.0},{"rep":"Steven Dam","total_files":86,"total_passes":66,"total_fails":20,"overall_ret":69.7,"overall_adj":-10.0,"commission":204225.0,"guardian_files":34,"guardian_ret":64.0,"alleviate_files":52,"alleviate_ret":73.2},{"rep":"Chase Corning","total_files":65,"total_passes":50,"total_fails":15,"overall_ret":70.0,"overall_adj":-5.0,"commission":168801.0,"guardian_files":23,"guardian_ret":78.9,"alleviate_files":42,"alleviate_ret":64.5},{"rep":"Cody Dunn","total_files":132,"total_passes":102,"total_fails":30,"overall_ret":70.6,"overall_adj":-5.0,"commission":343129.0,"guardian_files":38,"guardian_ret":77.4,"alleviate_files":94,"alleviate_ret":67.6},{"rep":"Erik Quintana","total_files":58,"total_passes":45,"total_fails":13,"overall_ret":71.1,"overall_adj":-5.0,"commission":170432.0,"guardian_files":18,"guardian_ret":80.0,"alleviate_files":40,"alleviate_ret":66.7},{"rep":"Zach Renderos","total_files":121,"total_passes":94,"total_fails":27,"overall_ret":71.3,"overall_adj":-5.0,"commission":323504.0,"guardian_files":35,"guardian_ret":75.0,"alleviate_files":86,"alleviate_ret":69.7},{"rep":"Ana Hidrogo","total_files":72,"total_passes":56,"total_fails":16,"overall_ret":71.4,"overall_adj":-5.0,"commission":190339.0,"guardian_files":24,"guardian_ret":73.7,"alleviate_files":48,"alleviate_ret":70.3},{"rep":"Isaac Huber","total_files":72,"total_passes":56,"total_fails":16,"overall_ret":71.4,"overall_adj":-5.0,"commission":210685.0,"guardian_files":32,"guardian_ret":81.5,"alleviate_files":40,"alleviate_ret":62.1},{"rep":"Neil Dumatol","total_files":63,"total_passes":49,"total_fails":14,"overall_ret":71.4,"overall_adj":-5.0,"commission":171260.0,"guardian_files":21,"guardian_ret":89.5,"alleviate_files":42,"alleviate_ret":60.0},{"rep":"Sheyda Shishegar","total_files":9,"total_passes":7,"total_fails":2,"overall_ret":71.4,"overall_adj":-5.0,"commission":33205.0,"guardian_files":3,"guardian_ret":50.0,"alleviate_files":6,"alleviate_ret":80.0},{"rep":"Charlie Duong","total_files":50,"total_passes":39,"total_fails":11,"overall_ret":71.8,"overall_adj":-5.0,"commission":134162.0,"guardian_files":15,"guardian_ret":84.6,"alleviate_files":35,"alleviate_ret":65.4},{"rep":"Yasamin Beitollahi","total_files":133,"total_passes":104,"total_fails":29,"overall_ret":72.1,"overall_adj":-5.0,"commission":388892.0,"guardian_files":57,"guardian_ret":76.1,"alleviate_files":76,"alleviate_ret":69.0},{"rep":"Jose Martinez  (Sales)","total_files":23,"total_passes":18,"total_fails":5,"overall_ret":72.2,"overall_adj":-5.0,"commission":62671.0,"guardian_files":23,"guardian_ret":72.2,"alleviate_files":0,"alleviate_ret":null},{"rep":"Tim Mccormack","total_files":93,"total_passes":73,"total_fails":20,"overall_ret":72.6,"overall_adj":-5.0,"commission":261010.0,"guardian_files":29,"guardian_ret":73.9,"alleviate_files":64,"alleviate_ret":72.0},{"rep":"Haleh Saber","total_files":61,"total_passes":48,"total_fails":13,"overall_ret":72.9,"overall_adj":-5.0,"commission":171609.0,"guardian_files":23,"guardian_ret":72.2,"alleviate_files":38,"alleviate_ret":73.3},{"rep":"Cole Guertin","total_files":85,"total_passes":67,"total_fails":18,"overall_ret":73.1,"overall_adj":-5.0,"commission":231187.0,"guardian_files":31,"guardian_ret":70.8,"alleviate_files":54,"alleviate_ret":74.4},{"rep":"Zach Muradian","total_files":66,"total_passes":52,"total_fails":14,"overall_ret":73.1,"overall_adj":-5.0,"commission":159800.0,"guardian_files":24,"guardian_ret":85.7,"alleviate_files":42,"alleviate_ret":64.5},{"rep":"Isaiah Maroun","total_files":90,"total_passes":71,"total_fails":19,"overall_ret":73.2,"overall_adj":-5.0,"commission":271330.0,"guardian_files":29,"guardian_ret":92.6,"alleviate_files":61,"alleviate_ret":61.4},{"rep":"Amir Asgari","total_files":57,"total_passes":45,"total_fails":12,"overall_ret":73.3,"overall_adj":-5.0,"commission":152846.0,"guardian_files":18,"guardian_ret":50.0,"alleviate_files":39,"alleviate_ret":81.8},{"rep":"Robert Ruiz","total_files":19,"total_passes":15,"total_fails":4,"overall_ret":73.3,"overall_adj":-5.0,"commission":69294.0,"guardian_files":8,"guardian_ret":66.7,"alleviate_files":11,"alleviate_ret":77.8},{"rep":"Masao Duclaud","total_files":19,"total_passes":15,"total_fails":4,"overall_ret":73.3,"overall_adj":-5.0,"commission":38735.0,"guardian_files":9,"guardian_ret":87.5,"alleviate_files":10,"alleviate_ret":57.1},{"rep":"Noah Peyton","total_files":24,"total_passes":19,"total_fails":5,"overall_ret":73.7,"overall_adj":-5.0,"commission":54537.0,"guardian_files":11,"guardian_ret":42.9,"alleviate_files":13,"alleviate_ret":91.7},{"rep":"Ross Richardson","total_files":106,"total_passes":84,"total_fails":22,"overall_ret":73.8,"overall_adj":-5.0,"commission":335612.0,"guardian_files":47,"guardian_ret":82.5,"alleviate_files":59,"alleviate_ret":65.9},{"rep":"Adrien Azera","total_files":82,"total_passes":65,"total_fails":17,"overall_ret":73.8,"overall_adj":-5.0,"commission":217783.0,"guardian_files":32,"guardian_ret":85.7,"alleviate_files":50,"alleviate_ret":64.9},{"rep":"Robert Brooks","total_files":92,"total_passes":73,"total_fails":19,"overall_ret":74.0,"overall_adj":-5.0,"commission":258871.0,"guardian_files":34,"guardian_ret":82.8,"alleviate_files":58,"alleviate_ret":68.2},{"rep":"Horacio Guzman","total_files":34,"total_passes":27,"total_fails":7,"overall_ret":74.1,"overall_adj":-5.0,"commission":83193.0,"guardian_files":14,"guardian_ret":72.7,"alleviate_files":20,"alleviate_ret":75.0},{"rep":"Blake Clark","total_files":68,"total_passes":54,"total_fails":14,"overall_ret":74.1,"overall_adj":-5.0,"commission":164426.0,"guardian_files":30,"guardian_ret":75.0,"alleviate_files":38,"alleviate_ret":73.3},{"rep":"Yess Pineda","total_files":83,"total_passes":66,"total_fails":17,"overall_ret":74.2,"overall_adj":-5.0,"commission":185857.0,"guardian_files":29,"guardian_ret":79.2,"alleviate_files":54,"alleviate_ret":71.4},{"rep":"Divine Calloway","total_files":54,"total_passes":43,"total_fails":11,"overall_ret":74.4,"overall_adj":-5.0,"commission":146353.0,"guardian_files":22,"guardian_ret":70.6,"alleviate_files":32,"alleviate_ret":76.9},{"rep":"Kory Griffin","total_files":123,"total_passes":98,"total_fails":25,"overall_ret":74.5,"overall_adj":-5.0,"commission":316334.0,"guardian_files":58,"guardian_ret":73.9,"alleviate_files":65,"alleviate_ret":75.0},{"rep":"Tyler Mollenkramer","total_files":69,"total_passes":55,"total_fails":14,"overall_ret":74.5,"overall_adj":-5.0,"commission":199586.0,"guardian_files":31,"guardian_ret":80.8,"alleviate_files":38,"alleviate_ret":69.0},{"rep":"Kevin Krolosky","total_files":74,"total_passes":59,"total_fails":15,"overall_ret":74.6,"overall_adj":-5.0,"commission":217448.0,"guardian_files":24,"guardian_ret":80.0,"alleviate_files":50,"alleviate_ret":71.8},{"rep":"Aaron Brown","total_files":80,"total_passes":64,"total_fails":16,"overall_ret":75.0,"overall_adj":-5.0,"commission":218215.0,"guardian_files":32,"guardian_ret":76.9,"alleviate_files":48,"alleviate_ret":73.7},{"rep":"Ty Cabrera","total_files":120,"total_passes":96,"total_fails":24,"overall_ret":75.0,"overall_adj":-5.0,"commission":305297.0,"guardian_files":49,"guardian_ret":77.5,"alleviate_files":71,"alleviate_ret":73.2},{"rep":"Paola Navarro","total_files":10,"total_passes":8,"total_fails":2,"overall_ret":75.0,"overall_adj":-5.0,"commission":16544.0,"guardian_files":0,"guardian_ret":null,"alleviate_files":10,"alleviate_ret":75.0},{"rep":"Roberto Silva","total_files":15,"total_passes":12,"total_fails":3,"overall_ret":75.0,"overall_adj":-5.0,"commission":28910.0,"guardian_files":3,"guardian_ret":50.0,"alleviate_files":12,"alleviate_ret":80.0},{"rep":"Sammy Sharaf","total_files":25,"total_passes":20,"total_fails":5,"overall_ret":75.0,"overall_adj":-5.0,"commission":62939.0,"guardian_files":7,"guardian_ret":100.0,"alleviate_files":18,"alleviate_ret":61.5},{"rep":"Jose Venegas","total_files":106,"total_passes":85,"total_fails":21,"overall_ret":75.3,"overall_adj":-5.0,"commission":310799.0,"guardian_files":49,"guardian_ret":77.5,"alleviate_files":57,"alleviate_ret":73.3},{"rep":"Daman Holland","total_files":71,"total_passes":57,"total_fails":14,"overall_ret":75.4,"overall_adj":-5.0,"commission":175947.0,"guardian_files":27,"guardian_ret":65.0,"alleviate_files":44,"alleviate_ret":81.1},{"rep":"Victor Pessina","total_files":71,"total_passes":57,"total_fails":14,"overall_ret":75.4,"overall_adj":-5.0,"commission":195743.0,"guardian_files":32,"guardian_ret":72.0,"alleviate_files":39,"alleviate_ret":78.1},{"rep":"Megan Cannon","total_files":56,"total_passes":45,"total_fails":11,"overall_ret":75.6,"overall_adj":-5.0,"commission":167094.0,"guardian_files":20,"guardian_ret":66.7,"alleviate_files":36,"alleviate_ret":80.0},{"rep":"Felicia Bell","total_files":97,"total_passes":78,"total_fails":19,"overall_ret":75.6,"overall_adj":-5.0,"commission":257716.0,"guardian_files":34,"guardian_ret":82.8,"alleviate_files":63,"alleviate_ret":71.4},{"rep":"Raul Fausto","total_files":72,"total_passes":58,"total_fails":14,"overall_ret":75.9,"overall_adj":-5.0,"commission":191009.0,"guardian_files":24,"guardian_ret":73.7,"alleviate_files":48,"alleviate_ret":76.9},{"rep":"Mack Ruffin","total_files":160,"total_passes":129,"total_fails":31,"overall_ret":76.0,"overall_adj":-5.0,"commission":451900.0,"guardian_files":55,"guardian_ret":75.0,"alleviate_files":105,"alleviate_ret":76.5},{"rep":"Peter Nguyen","total_files":140,"total_passes":113,"total_fails":27,"overall_ret":76.1,"overall_adj":-5.0,"commission":399365.0,"guardian_files":47,"guardian_ret":65.7,"alleviate_files":93,"alleviate_ret":80.8},{"rep":"Sami Ibrahim","total_files":99,"total_passes":80,"total_fails":19,"overall_ret":76.2,"overall_adj":-5.0,"commission":281050.0,"guardian_files":36,"guardian_ret":83.9,"alleviate_files":63,"alleviate_ret":71.4},{"rep":"Christopher Hacela","total_files":78,"total_passes":63,"total_fails":15,"overall_ret":76.2,"overall_adj":-5.0,"commission":201232.0,"guardian_files":37,"guardian_ret":67.9,"alleviate_files":41,"alleviate_ret":82.9},{"rep":"Justin Taylor","total_files":47,"total_passes":38,"total_fails":9,"overall_ret":76.3,"overall_adj":-5.0,"commission":132607.0,"guardian_files":19,"guardian_ret":73.3,"alleviate_files":28,"alleviate_ret":78.3},{"rep":"Jimmy Park","total_files":74,"total_passes":60,"total_fails":14,"overall_ret":76.7,"overall_adj":-5.0,"commission":200340.0,"guardian_files":27,"guardian_ret":65.0,"alleviate_files":47,"alleviate_ret":82.5},{"rep":"Danyn Cleary","total_files":16,"total_passes":13,"total_fails":3,"overall_ret":76.9,"overall_adj":-5.0,"commission":35556.0,"guardian_files":8,"guardian_ret":66.7,"alleviate_files":8,"alleviate_ret":85.7},{"rep":"Karina Gallucci","total_files":102,"total_passes":83,"total_fails":19,"overall_ret":77.1,"overall_adj":-5.0,"commission":190042.0,"guardian_files":22,"guardian_ret":77.8,"alleviate_files":80,"alleviate_ret":76.9},{"rep":"Robert Navarro","total_files":70,"total_passes":57,"total_fails":13,"overall_ret":77.2,"overall_adj":-5.0,"commission":179670.0,"guardian_files":28,"guardian_ret":66.7,"alleviate_files":42,"alleviate_ret":83.3},{"rep":"Dylon Davis","total_files":70,"total_passes":57,"total_fails":13,"overall_ret":77.2,"overall_adj":-5.0,"commission":180283.0,"guardian_files":26,"guardian_ret":76.2,"alleviate_files":44,"alleviate_ret":77.8},{"rep":"Sam Onghaei","total_files":115,"total_passes":94,"total_fails":21,"overall_ret":77.7,"overall_adj":-2.5,"commission":280694.0,"guardian_files":41,"guardian_ret":75.8,"alleviate_files":74,"alleviate_ret":78.7},{"rep":"Lauren Milton","total_files":132,"total_passes":108,"total_fails":24,"overall_ret":77.8,"overall_adj":-2.5,"commission":350069.0,"guardian_files":56,"guardian_ret":72.7,"alleviate_files":76,"alleviate_ret":81.2},{"rep":"Giovanni Morales","total_files":77,"total_passes":63,"total_fails":14,"overall_ret":77.8,"overall_adj":-2.5,"commission":187128.0,"guardian_files":29,"guardian_ret":79.2,"alleviate_files":48,"alleviate_ret":76.9},{"rep":"Rene Zarinana","total_files":11,"total_passes":9,"total_fails":2,"overall_ret":77.8,"overall_adj":-2.5,"commission":18501.0,"guardian_files":6,"guardian_ret":100.0,"alleviate_files":5,"alleviate_ret":33.3},{"rep":"Pourya Rahbar","total_files":33,"total_passes":27,"total_fails":6,"overall_ret":77.8,"overall_adj":-2.5,"commission":78791.0,"guardian_files":11,"guardian_ret":77.8,"alleviate_files":22,"alleviate_ret":77.8},{"rep":"Derek Lyons","total_files":44,"total_passes":36,"total_fails":8,"overall_ret":77.8,"overall_adj":-2.5,"commission":132292.0,"guardian_files":17,"guardian_ret":78.6,"alleviate_files":27,"alleviate_ret":77.3},{"rep":"Zack Rubinstein","total_files":72,"total_passes":59,"total_fails":13,"overall_ret":78.0,"overall_adj":-2.5,"commission":180824.0,"guardian_files":30,"guardian_ret":69.6,"alleviate_files":42,"alleviate_ret":83.3},{"rep":"Justin Birkelbach","total_files":78,"total_passes":64,"total_fails":14,"overall_ret":78.1,"overall_adj":-2.5,"commission":206242.0,"guardian_files":26,"guardian_ret":81.8,"alleviate_files":52,"alleviate_ret":76.2},{"rep":"Levon Gukasyan","total_files":84,"total_passes":69,"total_fails":15,"overall_ret":78.3,"overall_adj":-2.5,"commission":213163.0,"guardian_files":32,"guardian_ret":85.7,"alleviate_files":52,"alleviate_ret":73.2},{"rep":"Gabriel Amarillo","total_files":28,"total_passes":23,"total_fails":5,"overall_ret":78.3,"overall_adj":-2.5,"commission":64018.0,"guardian_files":11,"guardian_ret":90.0,"alleviate_files":17,"alleviate_ret":69.2},{"rep":"Aubrey Glass","total_files":73,"total_passes":60,"total_fails":13,"overall_ret":78.3,"overall_adj":-2.5,"commission":181557.0,"guardian_files":28,"guardian_ret":66.7,"alleviate_files":45,"alleviate_ret":84.6},{"rep":"Ahjana Oakes","total_files":17,"total_passes":14,"total_fails":3,"overall_ret":78.6,"overall_adj":-2.5,"commission":41708.0,"guardian_files":8,"guardian_ret":100.0,"alleviate_files":9,"alleviate_ret":50.0},{"rep":"Jason Powers","total_files":34,"total_passes":28,"total_fails":6,"overall_ret":78.6,"overall_adj":-2.5,"commission":116539.0,"guardian_files":12,"guardian_ret":66.7,"alleviate_files":22,"alleviate_ret":84.2},{"rep":"Jonathan Mamuyac","total_files":154,"total_passes":127,"total_fails":27,"overall_ret":78.7,"overall_adj":-2.5,"commission":392812.0,"guardian_files":60,"guardian_ret":77.6,"alleviate_files":94,"alleviate_ret":79.5},{"rep":"Michael Mina","total_files":86,"total_passes":71,"total_fails":15,"overall_ret":78.9,"overall_adj":-2.5,"commission":259758.0,"guardian_files":41,"guardian_ret":86.1,"alleviate_files":45,"alleviate_ret":71.4},{"rep":"Sean Miller","total_files":46,"total_passes":38,"total_fails":8,"overall_ret":78.9,"overall_adj":-2.5,"commission":113037.0,"guardian_files":12,"guardian_ret":50.0,"alleviate_files":34,"alleviate_ret":86.7},{"rep":"Parish Rahbar","total_files":81,"total_passes":67,"total_fails":14,"overall_ret":79.1,"overall_adj":-2.5,"commission":238306.0,"guardian_files":37,"guardian_ret":87.9,"alleviate_files":44,"alleviate_ret":70.6},{"rep":"Anthony Banuelos","total_files":64,"total_passes":53,"total_fails":11,"overall_ret":79.2,"overall_adj":-2.5,"commission":176443.0,"guardian_files":19,"guardian_ret":88.2,"alleviate_files":45,"alleviate_ret":75.0},{"rep":"Carlos Perez","total_files":35,"total_passes":29,"total_fails":6,"overall_ret":79.3,"overall_adj":-2.5,"commission":89660.0,"guardian_files":10,"guardian_ret":88.9,"alleviate_files":25,"alleviate_ret":75.0},{"rep":"Tyron Hamilton","total_files":76,"total_passes":63,"total_fails":13,"overall_ret":79.4,"overall_adj":-2.5,"commission":203914.0,"guardian_files":27,"guardian_ret":71.4,"alleviate_files":49,"alleviate_ret":83.3},{"rep":"Vinnie Scafidi Jr.","total_files":76,"total_passes":63,"total_fails":13,"overall_ret":79.4,"overall_adj":-2.5,"commission":204566.0,"guardian_files":27,"guardian_ret":65.0,"alleviate_files":49,"alleviate_ret":86.0},{"rep":"Angelica Lopez","total_files":71,"total_passes":59,"total_fails":12,"overall_ret":79.7,"overall_adj":-2.5,"commission":157925.0,"guardian_files":21,"guardian_ret":76.5,"alleviate_files":50,"alleviate_ret":81.0},{"rep":"Joseph Gutierrez","total_files":6,"total_passes":5,"total_fails":1,"overall_ret":80.0,"overall_adj":0.0,"commission":10119.0,"guardian_files":1,"guardian_ret":100.0,"alleviate_files":5,"alleviate_ret":75.0},{"rep":"Travis White","total_files":18,"total_passes":15,"total_fails":3,"overall_ret":80.0,"overall_adj":0.0,"commission":45496.0,"guardian_files":8,"guardian_ret":85.7,"alleviate_files":10,"alleviate_ret":75.0},{"rep":"Noah Harju","total_files":61,"total_passes":51,"total_fails":10,"overall_ret":80.4,"overall_adj":0.0,"commission":171375.0,"guardian_files":29,"guardian_ret":79.2,"alleviate_files":32,"alleviate_ret":81.5},{"rep":"Daniel Davidson","total_files":74,"total_passes":62,"total_fails":12,"overall_ret":80.6,"overall_adj":0.0,"commission":199684.0,"guardian_files":27,"guardian_ret":87.5,"alleviate_files":47,"alleviate_ret":76.3},{"rep":"Andrew Wong","total_files":105,"total_passes":88,"total_fails":17,"overall_ret":80.7,"overall_adj":0.0,"commission":281444.0,"guardian_files":42,"guardian_ret":76.5,"alleviate_files":63,"alleviate_ret":83.3},{"rep":"Ryan Sing","total_files":81,"total_passes":68,"total_fails":13,"overall_ret":80.9,"overall_adj":0.0,"commission":207335.0,"guardian_files":22,"guardian_ret":77.8,"alleviate_files":59,"alleviate_ret":82.0},{"rep":"Ola Razzaq","total_files":25,"total_passes":21,"total_fails":4,"overall_ret":81.0,"overall_adj":0.0,"commission":86623.0,"guardian_files":7,"guardian_ret":83.3,"alleviate_files":18,"alleviate_ret":80.0},{"rep":"Jason Alcala","total_files":83,"total_passes":70,"total_fails":13,"overall_ret":81.4,"overall_adj":0.0,"commission":207019.0,"guardian_files":29,"guardian_ret":96.4,"alleviate_files":54,"alleviate_ret":71.4},{"rep":"Albert Saenz","total_files":71,"total_passes":60,"total_fails":11,"overall_ret":81.7,"overall_adj":0.0,"commission":221688.0,"guardian_files":27,"guardian_ret":87.5,"alleviate_files":44,"alleviate_ret":77.8},{"rep":"Dennise Kerans","total_files":78,"total_passes":66,"total_fails":12,"overall_ret":81.8,"overall_adj":0.0,"commission":214564.0,"guardian_files":26,"guardian_ret":70.0,"alleviate_files":52,"alleviate_ret":87.0},{"rep":"Gabriel Agranowitz","total_files":177,"total_passes":150,"total_fails":27,"overall_ret":82.0,"overall_adj":0.0,"commission":434243.0,"guardian_files":80,"guardian_ret":85.7,"alleviate_files":97,"alleviate_ret":78.8},{"rep":"Jason Anderson","total_files":72,"total_passes":61,"total_fails":11,"overall_ret":82.0,"overall_adj":0.0,"commission":187683.0,"guardian_files":28,"guardian_ret":66.7,"alleviate_files":44,"alleviate_ret":90.0},{"rep":"Jose Martinez (Sales)","total_files":46,"total_passes":39,"total_fails":7,"overall_ret":82.1,"overall_adj":0.0,"commission":124387.0,"guardian_files":2,"guardian_ret":100.0,"alleviate_files":44,"alleviate_ret":81.1},{"rep":"Daniel Lorenzen","total_files":60,"total_passes":51,"total_fails":9,"overall_ret":82.4,"overall_adj":0.0,"commission":183954.0,"guardian_files":21,"guardian_ret":89.5,"alleviate_files":39,"alleviate_ret":78.1},{"rep":"Jason Hutcheon","total_files":127,"total_passes":108,"total_fails":19,"overall_ret":82.4,"overall_adj":0.0,"commission":319725.0,"guardian_files":49,"guardian_ret":83.3,"alleviate_files":78,"alleviate_ret":81.8},{"rep":"Aaron Marquez","total_files":149,"total_passes":127,"total_fails":22,"overall_ret":82.7,"overall_adj":2.5,"commission":406582.0,"guardian_files":65,"guardian_ret":86.0,"alleviate_files":84,"alleviate_ret":80.0},{"rep":"Cristy Galindo","total_files":61,"total_passes":52,"total_fails":9,"overall_ret":82.7,"overall_adj":2.5,"commission":148510.0,"guardian_files":22,"guardian_ret":95.2,"alleviate_files":39,"alleviate_ret":74.2},{"rep":"Carlos Cardona","total_files":34,"total_passes":29,"total_fails":5,"overall_ret":82.8,"overall_adj":2.5,"commission":83192.0,"guardian_files":14,"guardian_ret":83.3,"alleviate_files":20,"alleviate_ret":82.4},{"rep":"Lauren Alvarez","total_files":75,"total_passes":64,"total_fails":11,"overall_ret":82.8,"overall_adj":2.5,"commission":217718.0,"guardian_files":25,"guardian_ret":91.3,"alleviate_files":50,"alleviate_ret":78.0},{"rep":"Patrick Benison","total_files":55,"total_passes":47,"total_fails":8,"overall_ret":83.0,"overall_adj":2.5,"commission":136387.0,"guardian_files":17,"guardian_ret":100.0,"alleviate_files":38,"alleviate_ret":73.3},{"rep":"Benji Buso","total_files":62,"total_passes":53,"total_fails":9,"overall_ret":83.0,"overall_adj":2.5,"commission":159665.0,"guardian_files":19,"guardian_ret":94.4,"alleviate_files":43,"alleviate_ret":77.1},{"rep":"Ryan Lefeber","total_files":83,"total_passes":71,"total_fails":12,"overall_ret":83.1,"overall_adj":2.5,"commission":231467.0,"guardian_files":31,"guardian_ret":76.0,"alleviate_files":52,"alleviate_ret":87.0},{"rep":"Brenda Schulze","total_files":28,"total_passes":24,"total_fails":4,"overall_ret":83.3,"overall_adj":2.5,"commission":52235.0,"guardian_files":11,"guardian_ret":77.8,"alleviate_files":17,"alleviate_ret":86.7},{"rep":"Phillip Rennick","total_files":7,"total_passes":6,"total_fails":1,"overall_ret":83.3,"overall_adj":2.5,"commission":14595.0,"guardian_files":3,"guardian_ret":100.0,"alleviate_files":4,"alleviate_ret":66.7},{"rep":"Tyler Rogers","total_files":7,"total_passes":6,"total_fails":1,"overall_ret":83.3,"overall_adj":2.5,"commission":15031.0,"guardian_files":4,"guardian_ret":66.7,"alleviate_files":3,"alleviate_ret":100.0},{"rep":"Ryan Sparno","total_files":14,"total_passes":12,"total_fails":2,"overall_ret":83.3,"overall_adj":2.5,"commission":30029.0,"guardian_files":8,"guardian_ret":100.0,"alleviate_files":6,"alleviate_ret":50.0},{"rep":"Matthew Walker","total_files":7,"total_passes":6,"total_fails":1,"overall_ret":83.3,"overall_adj":2.5,"commission":23276.0,"guardian_files":4,"guardian_ret":100.0,"alleviate_files":3,"alleviate_ret":50.0},{"rep":"Anne Joseph","total_files":156,"total_passes":134,"total_fails":22,"overall_ret":83.6,"overall_adj":2.5,"commission":409554.0,"guardian_files":50,"guardian_ret":83.7,"alleviate_files":106,"alleviate_ret":83.5},{"rep":"Tim Huang","total_files":121,"total_passes":104,"total_fails":17,"overall_ret":83.7,"overall_adj":2.5,"commission":311172.0,"guardian_files":43,"guardian_ret":89.7,"alleviate_files":78,"alleviate_ret":80.0},{"rep":"Troy Engelhorn","total_files":65,"total_passes":56,"total_fails":9,"overall_ret":83.9,"overall_adj":2.5,"commission":178606.0,"guardian_files":23,"guardian_ret":95.5,"alleviate_files":42,"alleviate_ret":76.5},{"rep":"Diego Dominguez","total_files":65,"total_passes":56,"total_fails":9,"overall_ret":83.9,"overall_adj":2.5,"commission":152411.0,"guardian_files":21,"guardian_ret":95.0,"alleviate_files":44,"alleviate_ret":77.8},{"rep":"Adrian Ramirez","total_files":123,"total_passes":106,"total_fails":17,"overall_ret":84.0,"overall_adj":2.5,"commission":291292.0,"guardian_files":48,"guardian_ret":82.9,"alleviate_files":75,"alleviate_ret":84.6},{"rep":"Sanjay Verma","total_files":125,"total_passes":108,"total_fails":17,"overall_ret":84.3,"overall_adj":2.5,"commission":373199.0,"guardian_files":45,"guardian_ret":90.2,"alleviate_files":80,"alleviate_ret":80.6},{"rep":"Mia Mark","total_files":141,"total_passes":122,"total_fails":19,"overall_ret":84.4,"overall_adj":2.5,"commission":443442.0,"guardian_files":43,"guardian_ret":89.7,"alleviate_files":98,"alleviate_ret":81.9},{"rep":"Joshua Scott","total_files":67,"total_passes":58,"total_fails":9,"overall_ret":84.5,"overall_adj":2.5,"commission":182943.0,"guardian_files":29,"guardian_ret":84.0,"alleviate_files":38,"alleviate_ret":84.8},{"rep":"Trinh Collins","total_files":15,"total_passes":13,"total_fails":2,"overall_ret":84.6,"overall_adj":2.5,"commission":45651.0,"guardian_files":7,"guardian_ret":83.3,"alleviate_files":8,"alleviate_ret":85.7},{"rep":"Chrissy Urquiza","total_files":75,"total_passes":65,"total_fails":10,"overall_ret":84.6,"overall_adj":2.5,"commission":180908.0,"guardian_files":29,"guardian_ret":88.5,"alleviate_files":46,"alleviate_ret":82.1},{"rep":"Francis White","total_files":15,"total_passes":13,"total_fails":2,"overall_ret":84.6,"overall_adj":2.5,"commission":38522.0,"guardian_files":9,"guardian_ret":87.5,"alleviate_files":6,"alleviate_ret":80.0},{"rep":"Jovanny Nava","total_files":53,"total_passes":46,"total_fails":7,"overall_ret":84.8,"overall_adj":2.5,"commission":172091.0,"guardian_files":15,"guardian_ret":100.0,"alleviate_files":38,"alleviate_ret":77.4},{"rep":"Jessica Fisher","total_files":91,"total_passes":79,"total_fails":12,"overall_ret":84.8,"overall_adj":2.5,"commission":246975.0,"guardian_files":28,"guardian_ret":78.3,"alleviate_files":63,"alleviate_ret":87.5},{"rep":"Saif Qudah","total_files":46,"total_passes":40,"total_fails":6,"overall_ret":85.0,"overall_adj":5.0,"commission":114598.0,"guardian_files":24,"guardian_ret":80.0,"alleviate_files":22,"alleviate_ret":90.0},{"rep":"Sam Chouche","total_files":93,"total_passes":81,"total_fails":12,"overall_ret":85.2,"overall_adj":5.0,"commission":243412.0,"guardian_files":32,"guardian_ret":76.9,"alleviate_files":61,"alleviate_ret":89.1},{"rep":"David Cast","total_files":39,"total_passes":34,"total_fails":5,"overall_ret":85.3,"overall_adj":5.0,"commission":113699.0,"guardian_files":16,"guardian_ret":85.7,"alleviate_files":23,"alleviate_ret":85.0},{"rep":"David Buffington","total_files":47,"total_passes":41,"total_fails":6,"overall_ret":85.4,"overall_adj":5.0,"commission":135622.0,"guardian_files":13,"guardian_ret":81.8,"alleviate_files":34,"alleviate_ret":86.7},{"rep":"Doug Gismondi","total_files":63,"total_passes":55,"total_fails":8,"overall_ret":85.5,"overall_adj":5.0,"commission":163456.0,"guardian_files":22,"guardian_ret":90.0,"alleviate_files":41,"alleviate_ret":82.9},{"rep":"Jose Radilla","total_files":32,"total_passes":28,"total_fails":4,"overall_ret":85.7,"overall_adj":5.0,"commission":86405.0,"guardian_files":10,"guardian_ret":88.9,"alleviate_files":22,"alleviate_ret":84.2},{"rep":"Anthony Woods","total_files":64,"total_passes":56,"total_fails":8,"overall_ret":85.7,"overall_adj":5.0,"commission":166296.0,"guardian_files":22,"guardian_ret":84.2,"alleviate_files":42,"alleviate_ret":86.5},{"rep":"Alvaro Rios","total_files":16,"total_passes":14,"total_fails":2,"overall_ret":85.7,"overall_adj":5.0,"commission":30773.0,"guardian_files":4,"guardian_ret":66.7,"alleviate_files":12,"alleviate_ret":90.9},{"rep":"Ana Marmolejo","total_files":16,"total_passes":14,"total_fails":2,"overall_ret":85.7,"overall_adj":5.0,"commission":33766.0,"guardian_files":5,"guardian_ret":100.0,"alleviate_files":11,"alleviate_ret":77.8},{"rep":"Esteban Sanchez","total_files":24,"total_passes":21,"total_fails":3,"overall_ret":85.7,"overall_adj":5.0,"commission":62959.0,"guardian_files":7,"guardian_ret":83.3,"alleviate_files":17,"alleviate_ret":86.7},{"rep":"Liz Martinez","total_files":16,"total_passes":14,"total_fails":2,"overall_ret":85.7,"overall_adj":5.0,"commission":38218.0,"guardian_files":8,"guardian_ret":66.7,"alleviate_files":8,"alleviate_ret":100.0},{"rep":"David Ives","total_files":82,"total_passes":72,"total_fails":10,"overall_ret":86.1,"overall_adj":5.0,"commission":233259.0,"guardian_files":32,"guardian_ret":93.3,"alleviate_files":50,"alleviate_ret":81.0},{"rep":"Joelle Palombo","total_files":99,"total_passes":87,"total_fails":12,"overall_ret":86.2,"overall_adj":5.0,"commission":288822.0,"guardian_files":32,"guardian_ret":89.7,"alleviate_files":67,"alleviate_ret":84.5},{"rep":"Jovanny Reyes","total_files":92,"total_passes":81,"total_fails":11,"overall_ret":86.4,"overall_adj":5.0,"commission":261294.0,"guardian_files":41,"guardian_ret":89.2,"alleviate_files":51,"alleviate_ret":84.1},{"rep":"Solomon Abram","total_files":25,"total_passes":22,"total_fails":3,"overall_ret":86.4,"overall_adj":5.0,"commission":54777.0,"guardian_files":7,"guardian_ret":83.3,"alleviate_files":18,"alleviate_ret":87.5},{"rep":"Wyatt Stewart","total_files":69,"total_passes":61,"total_fails":8,"overall_ret":86.9,"overall_adj":5.0,"commission":180301.0,"guardian_files":28,"guardian_ret":83.3,"alleviate_files":41,"alleviate_ret":89.2},{"rep":"Amparo Batceva","total_files":27,"total_passes":24,"total_fails":3,"overall_ret":87.5,"overall_adj":5.0,"commission":55019.0,"guardian_files":9,"guardian_ret":71.4,"alleviate_files":18,"alleviate_ret":94.1},{"rep":"Evan Zermeno","total_files":36,"total_passes":32,"total_fails":4,"overall_ret":87.5,"overall_adj":5.0,"commission":105796.0,"guardian_files":15,"guardian_ret":100.0,"alleviate_files":21,"alleviate_ret":76.5},{"rep":"Mason Perry","total_files":111,"total_passes":99,"total_fails":12,"overall_ret":87.9,"overall_adj":5.0,"commission":277205.0,"guardian_files":36,"guardian_ret":87.5,"alleviate_files":75,"alleviate_ret":88.1},{"rep":"Zack White","total_files":37,"total_passes":33,"total_fails":4,"overall_ret":87.9,"overall_adj":5.0,"commission":104931.0,"guardian_files":17,"guardian_ret":86.7,"alleviate_files":20,"alleviate_ret":88.9},{"rep":"Daniel Negrete","total_files":47,"total_passes":42,"total_fails":5,"overall_ret":88.1,"overall_adj":5.0,"commission":149289.0,"guardian_files":16,"guardian_ret":85.7,"alleviate_files":31,"alleviate_ret":89.3},{"rep":"Melina Yegani","total_files":96,"total_passes":86,"total_fails":10,"overall_ret":88.4,"overall_adj":5.0,"commission":270471.0,"guardian_files":37,"guardian_ret":91.2,"alleviate_files":59,"alleviate_ret":86.5},{"rep":"Luis Rodriguez","total_files":20,"total_passes":18,"total_fails":2,"overall_ret":88.9,"overall_adj":5.0,"commission":40777.0,"guardian_files":5,"guardian_ret":75.0,"alleviate_files":15,"alleviate_ret":92.9},{"rep":"Jose Herrera","total_files":30,"total_passes":27,"total_fails":3,"overall_ret":88.9,"overall_adj":5.0,"commission":64978.0,"guardian_files":7,"guardian_ret":100.0,"alleviate_files":23,"alleviate_ret":85.0},{"rep":"America Olmedo","total_files":10,"total_passes":9,"total_fails":1,"overall_ret":88.9,"overall_adj":5.0,"commission":20222.0,"guardian_files":1,"guardian_ret":100.0,"alleviate_files":9,"alleviate_ret":87.5},{"rep":"Edwin Sanchez","total_files":20,"total_passes":18,"total_fails":2,"overall_ret":88.9,"overall_adj":5.0,"commission":51673.0,"guardian_files":14,"guardian_ret":83.3,"alleviate_files":6,"alleviate_ret":100.0},{"rep":"Jerry Ponce","total_files":82,"total_passes":74,"total_fails":8,"overall_ret":89.2,"overall_adj":5.0,"commission":213228.0,"guardian_files":29,"guardian_ret":92.6,"alleviate_files":53,"alleviate_ret":87.2},{"rep":"Javier Silva","total_files":72,"total_passes":65,"total_fails":7,"overall_ret":89.2,"overall_adj":5.0,"commission":186912.0,"guardian_files":26,"guardian_ret":91.7,"alleviate_files":46,"alleviate_ret":87.8},{"rep":"Danely Medina","total_files":31,"total_passes":28,"total_fails":3,"overall_ret":89.3,"overall_adj":5.0,"commission":84914.0,"guardian_files":11,"guardian_ret":90.0,"alleviate_files":20,"alleviate_ret":88.9},{"rep":"Carsen Ladd","total_files":33,"total_passes":30,"total_fails":3,"overall_ret":90.0,"overall_adj":5.0,"commission":88981.0,"guardian_files":14,"guardian_ret":100.0,"alleviate_files":19,"alleviate_ret":81.2},{"rep":"Annie Hall","total_files":22,"total_passes":20,"total_fails":2,"overall_ret":90.0,"overall_adj":5.0,"commission":55669.0,"guardian_files":7,"guardian_ret":83.3,"alleviate_files":15,"alleviate_ret":92.9},{"rep":"Lucia Brucella","total_files":78,"total_passes":71,"total_fails":7,"overall_ret":90.1,"overall_adj":5.0,"commission":184601.0,"guardian_files":26,"guardian_ret":87.0,"alleviate_files":52,"alleviate_ret":91.7},{"rep":"Aaron Vansickle","total_files":45,"total_passes":41,"total_fails":4,"overall_ret":90.2,"overall_adj":5.0,"commission":108493.0,"guardian_files":21,"guardian_ret":89.5,"alleviate_files":24,"alleviate_ret":90.9},{"rep":"Sandra Cardona","total_files":23,"total_passes":21,"total_fails":2,"overall_ret":90.5,"overall_adj":5.0,"commission":58337.0,"guardian_files":5,"guardian_ret":100.0,"alleviate_files":18,"alleviate_ret":87.5},{"rep":"Khalil Noori","total_files":81,"total_passes":74,"total_fails":7,"overall_ret":90.5,"overall_adj":5.0,"commission":220567.0,"guardian_files":36,"guardian_ret":90.9,"alleviate_files":45,"alleviate_ret":90.2},{"rep":"Marc Springer","total_files":154,"total_passes":141,"total_fails":13,"overall_ret":90.8,"overall_adj":5.0,"commission":438996.0,"guardian_files":64,"guardian_ret":91.5,"alleviate_files":90,"alleviate_ret":90.2},{"rep":"Rose Salout","total_files":143,"total_passes":131,"total_fails":12,"overall_ret":90.8,"overall_adj":5.0,"commission":469934.0,"guardian_files":58,"guardian_ret":92.6,"alleviate_files":85,"alleviate_ret":89.6},{"rep":"Marrnol Ramos","total_files":61,"total_passes":56,"total_fails":5,"overall_ret":91.1,"overall_adj":5.0,"commission":143233.0,"guardian_files":27,"guardian_ret":87.5,"alleviate_files":34,"alleviate_ret":93.8},{"rep":"Bryan Desai","total_files":112,"total_passes":103,"total_fails":9,"overall_ret":91.3,"overall_adj":5.0,"commission":329942.0,"guardian_files":36,"guardian_ret":87.5,"alleviate_files":76,"alleviate_ret":93.0},{"rep":"Christine Artiaga","total_files":13,"total_passes":12,"total_fails":1,"overall_ret":91.7,"overall_adj":5.0,"commission":32408.0,"guardian_files":6,"guardian_ret":80.0,"alleviate_files":7,"alleviate_ret":100.0},{"rep":"Riah Nessa","total_files":40,"total_passes":37,"total_fails":3,"overall_ret":91.9,"overall_adj":5.0,"commission":114562.0,"guardian_files":17,"guardian_ret":78.6,"alleviate_files":23,"alleviate_ret":100.0},{"rep":"Xavier Gingras","total_files":40,"total_passes":37,"total_fails":3,"overall_ret":91.9,"overall_adj":5.0,"commission":99939.0,"guardian_files":25,"guardian_ret":86.4,"alleviate_files":15,"alleviate_ret":100.0},{"rep":"Landen Fedukowicz","total_files":40,"total_passes":37,"total_fails":3,"overall_ret":91.9,"overall_adj":5.0,"commission":105399.0,"guardian_files":17,"guardian_ret":100.0,"alleviate_files":23,"alleviate_ret":85.0},{"rep":"Katelin Briones","total_files":68,"total_passes":63,"total_fails":5,"overall_ret":92.1,"overall_adj":5.0,"commission":205702.0,"guardian_files":24,"guardian_ret":95.7,"alleviate_files":44,"alleviate_ret":90.0},{"rep":"Miguel Sanchez","total_files":116,"total_passes":108,"total_fails":8,"overall_ret":92.6,"overall_adj":5.0,"commission":296339.0,"guardian_files":42,"guardian_ret":95.0,"alleviate_files":74,"alleviate_ret":91.2},{"rep":"Michael Rodriguez","total_files":29,"total_passes":27,"total_fails":2,"overall_ret":92.6,"overall_adj":5.0,"commission":85268.0,"guardian_files":12,"guardian_ret":100.0,"alleviate_files":17,"alleviate_ret":86.7},{"rep":"Anthony Avalos","total_files":15,"total_passes":14,"total_fails":1,"overall_ret":92.9,"overall_adj":5.0,"commission":34504.0,"guardian_files":8,"guardian_ret":100.0,"alleviate_files":7,"alleviate_ret":83.3},{"rep":"Marissa Ciara","total_files":78,"total_passes":73,"total_fails":5,"overall_ret":93.2,"overall_adj":5.0,"commission":209192.0,"guardian_files":31,"guardian_ret":96.7,"alleviate_files":47,"alleviate_ret":90.7},{"rep":"Robert Josett","total_files":78,"total_passes":73,"total_fails":5,"overall_ret":93.2,"overall_adj":5.0,"commission":240370.0,"guardian_files":32,"guardian_ret":93.3,"alleviate_files":46,"alleviate_ret":93.0},{"rep":"Leo Reynoso","total_files":64,"total_passes":60,"total_fails":4,"overall_ret":93.3,"overall_adj":5.0,"commission":186880.0,"guardian_files":25,"guardian_ret":95.8,"alleviate_files":39,"alleviate_ret":91.7},{"rep":"Mehrad Hassankhani","total_files":34,"total_passes":32,"total_fails":2,"overall_ret":93.8,"overall_adj":5.0,"commission":100125.0,"guardian_files":15,"guardian_ret":100.0,"alleviate_files":19,"alleviate_ret":88.2},{"rep":"Jon Plaza","total_files":20,"total_passes":19,"total_fails":1,"overall_ret":94.7,"overall_adj":5.0,"commission":50973.0,"guardian_files":8,"guardian_ret":100.0,"alleviate_files":12,"alleviate_ret":90.9},{"rep":"Andrew Khatib","total_files":124,"total_passes":118,"total_fails":6,"overall_ret":94.9,"overall_adj":5.0,"commission":337776.0,"guardian_files":47,"guardian_ret":95.6,"alleviate_files":77,"alleviate_ret":94.5},{"rep":"Andres Covarrubias","total_files":63,"total_passes":60,"total_fails":3,"overall_ret":95.0,"overall_adj":5.0,"commission":181058.0,"guardian_files":21,"guardian_ret":100.0,"alleviate_files":42,"alleviate_ret":92.3},{"rep":"Tamara Zivkovic","total_files":22,"total_passes":21,"total_fails":1,"overall_ret":95.2,"overall_adj":5.0,"commission":61760.0,"guardian_files":8,"guardian_ret":100.0,"alleviate_files":14,"alleviate_ret":92.3},{"rep":"Mauricio Cazares","total_files":36,"total_passes":35,"total_fails":1,"overall_ret":97.1,"overall_adj":5.0,"commission":89838.0,"guardian_files":11,"guardian_ret":100.0,"alleviate_files":25,"alleviate_ret":95.8},{"rep":"Miguel Garcia","total_files":40,"total_passes":39,"total_fails":1,"overall_ret":97.4,"overall_adj":5.0,"commission":138823.0,"guardian_files":14,"guardian_ret":92.3,"alleviate_files":26,"alleviate_ret":100.0},{"rep":"Miguel Esquivel","total_files":3,"total_passes":3,"total_fails":0,"overall_ret":100.0,"overall_adj":5.0,"commission":4453.0,"guardian_files":1,"guardian_ret":100.0,"alleviate_files":2,"alleviate_ret":100.0},{"rep":"Alex Ekhmies","total_files":5,"total_passes":5,"total_fails":0,"overall_ret":100.0,"overall_adj":5.0,"commission":9752.0,"guardian_files":0,"guardian_ret":null,"alleviate_files":5,"alleviate_ret":100.0},{"rep":"Javi Rodriguez","total_files":4,"total_passes":4,"total_fails":0,"overall_ret":100.0,"overall_adj":5.0,"commission":8392.0,"guardian_files":0,"guardian_ret":null,"alleviate_files":4,"alleviate_ret":100.0},{"rep":"Daniel Hernandez","total_files":9,"total_passes":9,"total_fails":0,"overall_ret":100.0,"overall_adj":5.0,"commission":23126.0,"guardian_files":1,"guardian_ret":100.0,"alleviate_files":8,"alleviate_ret":100.0},{"rep":"Jose Pimentel","total_files":15,"total_passes":15,"total_fails":0,"overall_ret":100.0,"overall_adj":5.0,"commission":32095.0,"guardian_files":3,"guardian_ret":100.0,"alleviate_files":12,"alleviate_ret":100.0},{"rep":"Quest King","total_files":27,"total_passes":27,"total_fails":0,"overall_ret":100.0,"overall_adj":5.0,"commission":80900.0,"guardian_files":15,"guardian_ret":100.0,"alleviate_files":12,"alleviate_ret":100.0},{"rep":"Jon Bennett","total_files":16,"total_passes":16,"total_fails":0,"overall_ret":100.0,"overall_adj":5.0,"commission":38404.0,"guardian_files":7,"guardian_ret":100.0,"alleviate_files":9,"alleviate_ret":100.0},{"rep":"Hala Katob","total_files":5,"total_passes":5,"total_fails":0,"overall_ret":100.0,"overall_adj":5.0,"commission":10042.0,"guardian_files":0,"guardian_ret":null,"alleviate_files":5,"alleviate_ret":100.0},{"rep":"Diego Barroso","total_files":19,"total_passes":19,"total_fails":0,"overall_ret":100.0,"overall_adj":5.0,"commission":50300.0,"guardian_files":8,"guardian_ret":100.0,"alleviate_files":11,"alleviate_ret":100.0},{"rep":"Angel Esparza","total_files":10,"total_passes":10,"total_fails":0,"overall_ret":100.0,"overall_adj":5.0,"commission":21680.0,"guardian_files":4,"guardian_ret":100.0,"alleviate_files":6,"alleviate_ret":100.0},{"rep":"Valentina Gomez","total_files":12,"total_passes":12,"total_fails":0,"overall_ret":100.0,"overall_adj":5.0,"commission":23468.0,"guardian_files":3,"guardian_ret":100.0,"alleviate_files":9,"alleviate_ret":100.0},{"rep":"Raul Garcia","total_files":6,"total_passes":6,"total_fails":0,"overall_ret":100.0,"overall_adj":5.0,"commission":10355.0,"guardian_files":1,"guardian_ret":100.0,"alleviate_files":5,"alleviate_ret":100.0},{"rep":"Torrin Rossi","total_files":3,"total_passes":3,"total_fails":0,"overall_ret":100.0,"overall_adj":5.0,"commission":8820.0,"guardian_files":2,"guardian_ret":100.0,"alleviate_files":1,"alleviate_ret":100.0},{"rep":"Chris Chartier","total_files":8,"total_passes":8,"total_fails":0,"overall_ret":100.0,"overall_adj":5.0,"commission":18839.0,"guardian_files":4,"guardian_ret":100.0,"alleviate_files":4,"alleviate_ret":100.0},{"rep":"Ken Cleaver","total_files":13,"total_passes":13,"total_fails":0,"overall_ret":100.0,"overall_adj":5.0,"commission":26136.0,"guardian_files":8,"guardian_ret":100.0,"alleviate_files":5,"alleviate_ret":100.0},{"rep":"Carolina Magana","total_files":5,"total_passes":5,"total_fails":0,"overall_ret":100.0,"overall_adj":5.0,"commission":7667.0,"guardian_files":3,"guardian_ret":100.0,"alleviate_files":2,"alleviate_ret":100.0},{"rep":"Jason Cazares","total_files":3,"total_passes":3,"total_fails":0,"overall_ret":100.0,"overall_adj":5.0,"commission":7310.0,"guardian_files":1,"guardian_ret":100.0,"alleviate_files":2,"alleviate_ret":100.0},{"rep":"Aaron Talili","total_files":3,"total_passes":3,"total_fails":0,"overall_ret":100.0,"overall_adj":5.0,"commission":9502.0,"guardian_files":1,"guardian_ret":100.0,"alleviate_files":2,"alleviate_ret":100.0},{"rep":"Marcus Sanchez","total_files":9,"total_passes":9,"total_fails":0,"overall_ret":100.0,"overall_adj":5.0,"commission":21768.0,"guardian_files":3,"guardian_ret":100.0,"alleviate_files":6,"alleviate_ret":100.0},{"rep":"Darcy Alsabti","total_files":7,"total_passes":7,"total_fails":0,"overall_ret":100.0,"overall_adj":5.0,"commission":14646.0,"guardian_files":1,"guardian_ret":100.0,"alleviate_files":6,"alleviate_ret":100.0},{"rep":"Jonathan Cutkelvin","total_files":8,"total_passes":8,"total_fails":0,"overall_ret":100.0,"overall_adj":5.0,"commission":20407.0,"guardian_files":6,"guardian_ret":100.0,"alleviate_files":2,"alleviate_ret":100.0},{"rep":"Matthew Ayala","total_files":5,"total_passes":5,"total_fails":0,"overall_ret":100.0,"overall_adj":5.0,"commission":13485.0,"guardian_files":1,"guardian_ret":100.0,"alleviate_files":4,"alleviate_ret":100.0},{"rep":"Giselle Medina","total_files":7,"total_passes":7,"total_fails":0,"overall_ret":100.0,"overall_adj":5.0,"commission":16985.0,"guardian_files":2,"guardian_ret":100.0,"alleviate_files":5,"alleviate_ret":100.0},{"rep":"Noosh Tolouee","total_files":4,"total_passes":4,"total_fails":0,"overall_ret":100.0,"overall_adj":5.0,"commission":10262.0,"guardian_files":4,"guardian_ret":100.0,"alleviate_files":0,"alleviate_ret":null}];
+const TEAMS={"LendVia (Alex Hernandez)":["Aaron Marquez","Adrian Ramirez","Andrew Wong","Anne Joseph","Brian Ghouri","Cody Dunn","Dahana Medina","Gabriel Agranowitz","Jessica Fisher","Jonathan Mamuyac","Karina Gallucci","Kory Griffin","Lauren Milton","Mack Ruffin","Mia Mark","Mina Michael","Peter Nguyen","Rose Salout","Ross Richardson","Steven Dam","Ty Cabrera","Yasamin Beitollahi","Zach Renderos"],"Apex Predators (Andrew Pessina)":["Andrew Khatib","Angelica Lopez","Anthony Banuelos","Benji Buso","Chrissy Urquiza","Christopher Hacela","Daman Holland","Danely Gomez","Diego Barroso","Eric Gonzalez","Giselle Medina","Jimmy Park","Jose Venegas","Karl Pina","Katelin Briones","Kerry Andrews","Lauren Alvarez","Levon Gukasyan","Sanjay Verma","Tim McCormack","Vinnie Scafidi Jr.","Wyatt Stewart"],"Buzzer Beaters (Carlos Sanchez)":["Aaron Talili","Albert Saenz","Alexis Gatica","Andres Covarrubias","Angel Esparza","Art Davison","Chase Corning","David Ives","Edwin Sanchez","Evan Zermeno","Jace Foti","Jason Anderson","Jason Moore","Javier Silva","Jose Martinez","Joshua Scott","Landen Fedukowicz","Leo Reynoso","Mario Cabrera","Mason Perry","Neil Dumatol","Patrick Benison","Robert Josett","Sam Chouche","Zachary White"],"High Rollers (Rob Navarro)":["Aaron Brown","Angelo Mendoza","Ann Hall","Anthony Woods","Blake Clark","Charlie Duong","Darcy Alsabti","Giovanni Morales","Haleh Saber","Jason Hutcheon","Jovanny Nava","Ken Cleaver","Khalil Noori","Megan Cannon","Melina Yegani","Noah Harju","Robert Brooks","Saif Qudah","Sandra Cardona","Tamara Zivkovic","Troy Engelhorn","Will Avila","Zach Muradian"],"TMT (David Karmann)":["Amber Bastro","Cole Guertin","Daniel Lorenzen","Esteban Sanchez","Jason Cazares","Jovanny Reyes","Kevin Krolosky","Lizbeth Martinez","Lucia Brucella","Marc Springer","Marissa Ciara","Miguel Sanchez","Moses Sanchez","Noosh Tolouee","Parish Rahbar","Ryan Singh","Tim Huang","Tyler Mollenkramer","Tyron Hamilton","Valentina Valderrama","Xavier Gingras","Zack Rubinstein"],"Team Consistency (Omar Oazza)":["Adrien Azera","Amir Asgari","Ana Hidrogo","Aubrey Glass","Charles Dean","Charlie Awad","Derek Lyons","Doug Gismondi","Isaiah Maroun","Jason Alcala","Matthew Ayala","Michael Dimaggio","Miguel Garcia","Monica Ruelas","Raul Fausto","Rose Bafaiz","Ryan Lefeber","Saif Hammad","Sam Onghaei","Sami Ibrahim","Yess Pineda"],"Sovereigns (Taylor Duran)":["Aaron Van Sickle","Anthony Avalos","Carolina Magana","Cristy Galindo","Daniel Davidson","Daniel Negrete","Diego Dominguez","Dylon Davis","Felicia Bell","Isaac Huber","Jerry Ponce","Joelle Palombo","Jonathan Cutkelvin","Justin Birelbach","Justin Taylor","Marcus Sanchez","Marrnol Ramos","Mehrad Hassankhani","Miles Herrera","Quest King","Star Alcala","Tracy Neri"],"Training BDS 37 (Frank)":["Ado Deljanin","Alejandro Ortiz","Archie Ghasemi","Blake Elfsten","Brandon Barnett","Cody Barnett","Daniel Dwyer","Nathan Rodriguez","Bobby Morales","Samantha Ramirez"]};
+const REP_TEAM={"Zach Muradian":"High Rollers (Rob Navarro)","Khalil Noori":"High Rollers (Rob Navarro)","Justin Taylor":"Sovereigns (Taylor Duran)","Mia Mark":"LendVia (Alex Hernandez)","Angel Esparza":"Buzzer Beaters (Carlos Sanchez)","Tim Mccormack":"Apex Predators (Andrew Pessina)","Michael Dimaggio":"Team Consistency (Omar Oazza)","Chrissy Urquiza":"Apex Predators (Andrew Pessina)","Aaron Talili":"Buzzer Beaters (Carlos Sanchez)","Amir Asgari":"Team Consistency (Omar Oazza)","Tyler Mollenkramer":"TMT (David Karmann)","Jason Cazares":"TMT (David Karmann)","Saif Hammad":"Team Consistency (Omar Oazza)","Charlie Duong":"High Rollers (Rob Navarro)","Charles Dean":"Team Consistency (Omar Oazza)","Star Alcala":"Sovereigns (Taylor Duran)","Cody Dunn":"LendVia (Alex Hernandez)","Aaron Brown":"High Rollers (Rob Navarro)","Jonathan Mamuyac":"LendVia (Alex Hernandez)","Karina Gallucci":"LendVia (Alex Hernandez)","Anthony Avalos":"Sovereigns (Taylor Duran)","Ross Richardson":"LendVia (Alex Hernandez)","Vinnie Scafidi Jr.":"Apex Predators (Andrew Pessina)","Joelle Palombo":"Sovereigns (Taylor Duran)","Eric Gonzalez":"Apex Predators (Andrew Pessina)","Jimmy Park":"Apex Predators (Andrew Pessina)","Kevin Krolosky":"TMT (David Karmann)","Daniel Lorenzen":"TMT (David Karmann)","Cole Guertin":"TMT (David Karmann)","Charlie Awad":"Team Consistency (Omar Oazza)","Isaiah Maroun":"Team Consistency (Omar Oazza)","Mason Perry":"Buzzer Beaters (Carlos Sanchez)","Rose Salout":"LendVia (Alex Hernandez)","Daniel Davidson":"Sovereigns (Taylor Duran)","Lucia Brucella":"TMT (David Karmann)","Tim Huang":"TMT (David Karmann)","Landen Fedukowicz":"Buzzer Beaters (Carlos Sanchez)","Karl Pina":"Apex Predators (Andrew Pessina)","Sandra Cardona":"High Rollers (Rob Navarro)","Daniel Negrete":"Sovereigns (Taylor Duran)","Adrian Ramirez":"LendVia (Alex Hernandez)","Miguel Sanchez":"TMT (David Karmann)","Steven Dam":"LendVia (Alex Hernandez)","Yasamin Beitollahi":"LendVia (Alex Hernandez)","Jason Moore":"Buzzer Beaters (Carlos Sanchez)","Matthew Ayala":"Team Consistency (Omar Oazza)","Jason Hutcheon":"High Rollers (Rob Navarro)","Zack Rubinstein":"TMT (David Karmann)","Mack Ruffin":"LendVia (Alex Hernandez)","Edwin Sanchez":"Buzzer Beaters (Carlos Sanchez)","Tracy Neri":"Sovereigns (Taylor Duran)","Angelica Lopez":"Apex Predators (Andrew Pessina)","Anthony Banuelos":"Apex Predators (Andrew Pessina)","Parish Rahbar":"TMT (David Karmann)","Robert Josett":"Buzzer Beaters (Carlos Sanchez)","Diego Barroso":"Apex Predators (Andrew Pessina)","Giovanni Morales":"High Rollers (Rob Navarro)","Noah Harju":"High Rollers (Rob Navarro)","Quest King":"Sovereigns (Taylor Duran)","Anthony Woods":"High Rollers (Rob Navarro)","Marrnol Ramos":"Sovereigns (Taylor Duran)","Chase Corning":"Buzzer Beaters (Carlos Sanchez)","Javier Silva":"Buzzer Beaters (Carlos Sanchez)","Marc Springer":"TMT (David Karmann)","Andres Covarrubias":"Buzzer Beaters (Carlos Sanchez)","Jonathan Cutkelvin":"Sovereigns (Taylor Duran)","Kory Griffin":"LendVia (Alex Hernandez)","Esteban Sanchez":"TMT (David Karmann)","Diego Dominguez":"Sovereigns (Taylor Duran)","Sanjay Verma":"Apex Predators (Andrew Pessina)","Haleh Saber":"High Rollers (Rob Navarro)","Rose Bafaiz":"Team Consistency (Omar Oazza)","Andrew Wong":"LendVia (Alex Hernandez)","Dylon Davis":"Sovereigns (Taylor Duran)","Tyron Hamilton":"TMT (David Karmann)","Moses Sanchez":"TMT (David Karmann)","Miguel Garcia":"Team Consistency (Omar Oazza)","Tamara Zivkovic":"High Rollers (Rob Navarro)","Dahana Medina":"LendVia (Alex Hernandez)","Darcy Alsabti":"High Rollers (Rob Navarro)","Saif Qudah":"High Rollers (Rob Navarro)","David Ives":"Buzzer Beaters (Carlos Sanchez)","Yess Pineda":"Team Consistency (Omar Oazza)","Albert Saenz":"Buzzer Beaters (Carlos Sanchez)","Raul Fausto":"Team Consistency (Omar Oazza)","Mehrad Hassankhani":"Sovereigns (Taylor Duran)","Blake Clark":"High Rollers (Rob Navarro)","Adrien Azera":"Team Consistency (Omar Oazza)","Megan Cannon":"High Rollers (Rob Navarro)","Aubrey Glass":"Team Consistency (Omar Oazza)","Kerry Andrews":"Apex Predators (Andrew Pessina)","Marissa Ciara":"TMT (David Karmann)","Ken Cleaver":"High Rollers (Rob Navarro)","Ana Hidrogo":"Team Consistency (Omar Oazza)","Sam Chouche":"Buzzer Beaters (Carlos Sanchez)","Doug Gismondi":"Team Consistency (Omar Oazza)","Jace Foti":"Buzzer Beaters (Carlos Sanchez)","Monica Ruelas":"Team Consistency (Omar Oazza)","Lauren Alvarez":"Apex Predators (Andrew Pessina)","Jose Venegas":"Apex Predators (Andrew Pessina)","Sami Ibrahim":"Team Consistency (Omar Oazza)","Melina Yegani":"High Rollers (Rob Navarro)","Carolina Magana":"Sovereigns (Taylor Duran)","Anne Joseph":"LendVia (Alex Hernandez)","Alexis Gatica":"Buzzer Beaters (Carlos Sanchez)","Evan Zermeno":"Buzzer Beaters (Carlos Sanchez)","Aaron Marquez":"LendVia (Alex Hernandez)","Jessica Fisher":"LendVia (Alex Hernandez)","Xavier Gingras":"TMT (David Karmann)","Leo Reynoso":"Buzzer Beaters (Carlos Sanchez)","Jovanny Reyes":"TMT (David Karmann)","Giselle Medina":"Apex Predators (Andrew Pessina)","Peter Nguyen":"LendVia (Alex Hernandez)","Angelo Mendoza":"High Rollers (Rob Navarro)","Amber Bastro":"TMT (David Karmann)","Katelin Briones":"Apex Predators (Andrew Pessina)","Ryan Lefeber":"Team Consistency (Omar Oazza)","Wyatt Stewart":"Apex Predators (Andrew Pessina)","Jovanny Nava":"High Rollers (Rob Navarro)","Jason Anderson":"Buzzer Beaters (Carlos Sanchez)","Mario Cabrera":"Buzzer Beaters (Carlos Sanchez)","Art Davison":"Buzzer Beaters (Carlos Sanchez)","Lauren Milton":"LendVia (Alex Hernandez)","Christopher Hacela":"Apex Predators (Andrew Pessina)","Neil Dumatol":"Buzzer Beaters (Carlos Sanchez)","Benji Buso":"Apex Predators (Andrew Pessina)","Jose Martinez":"Buzzer Beaters (Carlos Sanchez)","Robert Brooks":"High Rollers (Rob Navarro)","Joshua Scott":"Buzzer Beaters (Carlos Sanchez)","Andrew Khatib":"Apex Predators (Andrew Pessina)","Derek Lyons":"Team Consistency (Omar Oazza)","Jason Alcala":"Team Consistency (Omar Oazza)","Zach Renderos":"LendVia (Alex Hernandez)","Gabriel Agranowitz":"LendVia (Alex Hernandez)","Miles Herrera":"Sovereigns (Taylor Duran)","Ty Cabrera":"LendVia (Alex Hernandez)","Felicia Bell":"Sovereigns (Taylor Duran)","Marcus Sanchez":"Sovereigns (Taylor Duran)","Isaac Huber":"Sovereigns (Taylor Duran)","Daman Holland":"Apex Predators (Andrew Pessina)","Jerry Ponce":"Sovereigns (Taylor Duran)","Cristy Galindo":"Sovereigns (Taylor Duran)","Noosh Tolouee":"TMT (David Karmann)","Levon Gukasyan":"Apex Predators (Andrew Pessina)","Sam Onghaei":"Team Consistency (Omar Oazza)","Patrick Benison":"Buzzer Beaters (Carlos Sanchez)","Troy Engelhorn":"High Rollers (Rob Navarro)"};
+
+// ===== GLOBALS =====
+const GLG_RATE=0.076, ALV_RATE=0.085;
+let rpg=0,rkpg=0,dbpg=0;
+const RPG=30,RKPG=50,DBPG=50;
+let _AR=[],_DB=[],_AR_LOADED=false,_DB_LOADED=false;
+
+function loadAR(){if(!_AR_LOADED){_AR_LOADED=true;fetch('/atrisk.json').then(function(r){return r.json();}).then(function(d){_AR=d;if(document.getElementById('tab-atrisk').classList.contains('active'))renderRisk();}).catch(function(e){console.error('AR fetch error',e);});}}
+function loadDB(){if(!_DB_LOADED){_DB_LOADED=true;fetch('/clientdb.json').then(function(r){return r.json();}).then(function(d){_DB=d;if(document.getElementById('tab-clientdb').classList.contains('active'))renderDB();}).catch(function(e){console.error('DB fetch error',e);});}}
+
+// ===== HELPERS =====
+function retColor(r){return r>=82.5?'#00d48a':r>=80?'#4d8fff':r>=77.5?'#f59e0b':r>=70?'#fb923c':'#ff3d5a';}
+function adjClass(a){return a>0?'adj-pos':a>=-2.5?'adj-neg-light':'adj-neg-hard';}
+function fmtM(n){if(!n&&n!==0)return'—';if(Math.abs(n)>=1000000)return'$'+(n/1000000).toFixed(2)+'M';if(Math.abs(n)>=1000)return'$'+(n/1000).toFixed(0)+'K';return'$'+n.toFixed(0);}
+function fmtPct(n){return n==null?'—':n.toFixed(1)+'%';}
+function tierLabel(r){return r>=85?'+5% Bonus':r>=82.5?'+2.5% Bonus':r>=80?'0% Neutral':r>=77.5?'-2.5% Reduction':r>=70?'-5% Reduction':r>=65?'-10% Reduction':'-12% Reduction';}
+function tierColor(r){return r>=82.5?'#00d48a':r>=80?'#8a9bb5':r>=77.5?'#f59e0b':'#ff3d5a';}
+
+// ===== RANK A+ to F- =====
+function calcRank(score){
+  if(score>=260)return'A+';if(score>=230)return'A';if(score>=200)return'A-';
+  if(score>=170)return'B+';if(score>=140)return'B';if(score>=110)return'B-';
+  if(score>=85)return'C+';if(score>=65)return'C';if(score>=45)return'C-';
+  if(score>=25)return'D+';if(score>=10)return'D';if(score>=0)return'D-';
+  if(score>=-20)return'F+';if(score>=-50)return'F';return'F-';
+}
+function rankCls(g){const m={'A+':'Ap','A':'A','A-':'Am','B+':'Bp','B':'B','B-':'Bm','C+':'Cp','C':'C','C-':'Cm','D+':'Dp','D':'D','D-':'Dm','F+':'Fp','F':'F','F-':'Fm'};return'rank rank-'+(m[g]||'bk');}
+
+// ===== TAB SWITCHING =====
+function switchTab(id,el){
+  document.querySelectorAll('.page').forEach(p=>p.classList.remove('active'));
+  document.querySelectorAll('.tab').forEach(t=>t.classList.remove('active'));
+  document.getElementById('tab-'+id).classList.add('active');
+  el.classList.add('active');
+  if(id==='reps')renderReps();
+  if(id==='atrisk'){loadAR();renderRisk();}
+  if(id==='clientdb'){loadDB();renderDB();}
+}
+
+// ===== INIT =====
+function initSelects(){
+  const teamNames=Object.keys(TEAMS);
+  ['hTeam','repTeam','riskTeam','dbTeam'].forEach(function(id){
+    const el=document.getElementById(id);
+    if(!el)return;
+    teamNames.forEach(function(t){
+      const o=document.createElement('option');o.value=t;o.textContent=t;el.appendChild(o);
+    });
+  });
+  const lblMap={'2025-01':'Jan 2025','2025-02':'Feb 2025','2025-03':'Mar 2025','2025-04':'Apr 2025','2025-05':'May 2025','2025-06':'Jun 2025','2025-07':'Jul 2025','2025-08':'Aug 2025','2025-09':'Sep 2025','2025-10':'Oct 2025','2025-11':'Nov 2025','2025-12':'Dec 2025','2026-01':'Jan 2026','2026-02':'Feb 2026','2026-03':'Mar 2026'};
+  const lbCounts={'2025-01':240,'2025-02':354,'2025-03':423,'2025-04':545,'2025-05':546,'2025-06':484,'2025-07':560,'2025-08':655,'2025-09':833,'2025-10':797,'2025-11':620,'2025-12':708,'2026-01':612,'2026-02':348,'2026-03':79};
+  const riskSel=document.getElementById('riskLBMonth');
+  if(riskSel){
+    ['2025-01','2025-02','2025-03','2025-04','2025-05','2025-06','2025-07','2025-08','2025-09','2025-10','2025-11','2025-12','2026-01','2026-02','2026-03'].forEach(function(m){
+      const o=document.createElement('option');o.value=m;
+      o.textContent=(lblMap[m]||m)+' ('+(lbCounts[m]||0)+')';
+      riskSel.appendChild(o);
+    });
+  }
+}
+
+// ===== ACH SETTLED DATE =====
+function settledDate(){
+  var d=new Date('2026-03-16');
+  var bdays=0;
+  while(bdays<3){d.setDate(d.getDate()-1);if(d.getDay()!==0&&d.getDay()!==6)bdays++;}
+  return d.toLocaleDateString('en-US',{month:'short',day:'numeric',year:'numeric'});
+}
+
+// ===== OVERVIEW =====
+function renderOverview(){
+  var settled=settledDate();
+
+  // Current Standing — open non-March cohorts
+  var openCohorts=COHORT.filter(function(c){return !c.window_closed&&!(c.incomplete&&c.fails===0&&c.cur_ret>90);});
+  var csGrid=document.getElementById('csGrid');
+  if(csGrid){
+    csGrid.innerHTML=openCohorts.map(function(c){
+      var rc=retColor(c.cur_ret);
+      var bp=Math.max(0,Math.min(100,(c.cur_ret-60)/40*100));
+      var adj=c.cur_adj;
+      var adjC=adj>0?'#00d48a':adj>-2.5?'#f59e0b':'#ff3d5a';
+      var lob=c.lob==='GUARDIAN'?'GLG':'ALV';
+      var lobC=c.lob==='GUARDIAN'?'#4d8fff':'#00d48a';
+      return '<div class="cs-card" style="border-top:2px solid '+rc+'">'+
+        '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:10px">'+
+          '<div>'+
+            '<div style="font-family:Barlow Condensed,sans-serif;font-size:17px;font-weight:700">'+c.month_label+'</div>'+
+            '<div style="font-size:9px;color:#4a5a72;font-family:DM Mono,monospace;margin-top:2px">'+c.days_left+'d to close &middot; Eval '+c.eval_month+'</div>'+
+          '</div>'+
+          '<span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:3px;background:rgba(77,143,255,.15);color:'+lobC+'">'+lob+'</span>'+
+        '</div>'+
+        '<div style="font-family:Barlow Condensed,sans-serif;font-size:46px;font-weight:800;color:'+rc+';line-height:1">'+c.cur_ret.toFixed(1)+'%</div>'+
+        '<div style="height:4px;background:#1c2535;border-radius:2px;margin:8px 0 4px;overflow:hidden"><div style="width:'+bp+'%;height:100%;background:'+rc+';border-radius:2px"></div></div>'+
+        '<div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:10px">'+
+          '<span style="font-size:10px;color:'+tierColor(c.cur_ret)+';font-family:DM Mono,monospace;font-weight:600">'+tierLabel(c.cur_ret)+'</span>'+
+          '<span style="font-size:13px;font-weight:700;color:'+adjC+';font-family:DM Mono,monospace">'+(adj>=0?'+':'')+adj+'%</span>'+
+        '</div>'+
+        '<div style="display:flex;gap:8px;padding-top:10px;border-top:1px solid #1e2d42">'+
+          '<div style="flex:1"><div style="font-size:9px;color:#4a5a72;text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px">Passed</div><div style="font-family:DM Mono,monospace;font-size:13px;font-weight:600;color:#00d48a">'+c.passes.toLocaleString()+'</div></div>'+
+          '<div style="flex:1"><div style="font-size:9px;color:#4a5a72;text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px">Failed</div><div style="font-family:DM Mono,monospace;font-size:13px;font-weight:600;color:#ff3d5a">'+c.fails.toLocaleString()+'</div></div>'+
+          '<div style="flex:1"><div style="font-size:9px;color:#4a5a72;text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px">Files</div><div style="font-family:DM Mono,monospace;font-size:13px;font-weight:600">'+c.payable_files.toLocaleString()+'</div></div>'+
+          '<div style="flex:1"><div style="font-size:9px;color:#4a5a72;text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px">At Risk</div><div style="font-family:DM Mono,monospace;font-size:13px;font-weight:600;color:#f59e0b">'+c.at_risk_active+'</div></div>'+
+        '</div>'+
+        '<div style="margin-top:8px;font-size:9px;color:#4a5a72;font-family:DM Mono,monospace">ACH settled through '+settled+'</div>'+
+      '</div>';
+    }).join('');
+  }
+
+  // March summary banner
+  var earlyGLG=COHORT.find(function(c){return c.lob==='GUARDIAN'&&c.incomplete&&c.fails===0&&c.cur_ret>90;});
+  var earlyALV=COHORT.find(function(c){return c.lob==='ALLEVIATE'&&c.incomplete&&c.fails===0&&c.cur_ret>90;});
+  var banner=document.getElementById('marchBanner');
+  if(banner&&(earlyGLG||earlyALV)){
+    var daysE=16,daysR=15;
+    var gClr=earlyGLG?earlyGLG.passes:0;
+    var aClr=earlyALV?earlyALV.passes:0;
+    var gProj=gClr+Math.round(gClr/daysE*daysR);
+    var aProj=aClr+Math.round(aClr/daysE*daysR);
+    var gComm=gProj*30555*0.076;
+    var aComm=aProj*32223*0.085;
+    var total=gComm+aComm;
+    var ml=earlyGLG?earlyGLG.month_label:'Current Month';
+    banner.style.display='flex';
+    banner.innerHTML=
+      '<div style="min-width:160px;padding-right:24px;border-right:1px solid #1e2d42">'+
+        '<div style="font-family:Barlow Condensed,sans-serif;font-size:19px;font-weight:700">'+ml+'</div>'+
+        '<div style="font-size:11px;color:#8a9bb5;margin-top:4px">'+daysE+'d elapsed &middot; '+daysR+'d left</div>'+
+        '<div style="margin-top:8px;display:inline-flex;align-items:center;gap:5px;background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.2);border-radius:4px;padding:2px 8px">'+
+          '<span style="width:6px;height:6px;border-radius:50%;background:#22d3ee;display:inline-block"></span>'+
+          '<span style="font-size:10px;color:#22d3ee;font-family:DM Mono,monospace">IN PROGRESS</span>'+
+        '</div>'+
+      '</div>'+
+      '<div style="flex:1;display:grid;grid-template-columns:1fr 1fr 1fr 1.3fr;gap:0">'+
+        '<div style="padding:0 24px;border-right:1px solid #1e2d42">'+
+          '<div style="font-size:10px;color:#8a9bb5;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Cleared So Far</div>'+
+          '<div style="font-family:Barlow Condensed,sans-serif;font-size:32px;font-weight:700;line-height:1">'+(gClr+aClr).toLocaleString()+'</div>'+
+          '<div style="font-size:11px;color:#8a9bb5;margin-top:5px">GLG <span style="color:#4d8fff">'+gClr.toLocaleString()+'</span> &nbsp;&middot;&nbsp; ALV <span style="color:#00d48a">'+aClr.toLocaleString()+'</span></div>'+
+        '</div>'+
+        '<div style="padding:0 24px;border-right:1px solid #1e2d42">'+
+          '<div style="font-size:10px;color:#4d8fff;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">GLG Commission</div>'+
+          '<div style="font-family:Barlow Condensed,sans-serif;font-size:32px;font-weight:700;color:#4d8fff;line-height:1">'+fmtM(gComm)+'</div>'+
+          '<div style="font-size:11px;color:#8a9bb5;margin-top:5px">'+gProj.toLocaleString()+' proj. files &times; 7.6%</div>'+
+        '</div>'+
+        '<div style="padding:0 24px;border-right:1px solid #1e2d42">'+
+          '<div style="font-size:10px;color:#00d48a;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">ALV Commission</div>'+
+          '<div style="font-family:Barlow Condensed,sans-serif;font-size:32px;font-weight:700;color:#00d48a;line-height:1">'+fmtM(aComm)+'</div>'+
+          '<div style="font-size:11px;color:#8a9bb5;margin-top:5px">'+aProj.toLocaleString()+' proj. files &times; 8.5%</div>'+
+        '</div>'+
+        '<div style="padding:0 24px">'+
+          '<div style="font-size:10px;color:#8a9bb5;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Total Projected</div>'+
+          '<div style="font-family:Barlow Condensed,sans-serif;font-size:36px;font-weight:800;line-height:1">'+fmtM(total)+'</div>'+
+          '<div style="font-size:11px;color:#00d48a;margin-top:5px">&#9679; '+ml+' projected total</div>'+
+        '</div>'+
+      '</div>';
+  }
+
+  // GLG + ALV projection cards
+  var glg=COHORT.filter(function(c){return c.lob==='GUARDIAN';}).sort(function(a,b){return a.payable_month.localeCompare(b.payable_month);}).slice(-5);
+  var alv=COHORT.filter(function(c){return c.lob==='ALLEVIATE';}).sort(function(a,b){return a.payable_month.localeCompare(b.payable_month);}).slice(-5);
+  var glgEl=document.getElementById('glgCards');
+  var alvEl=document.getElementById('alvCards');
+  if(glgEl)glgEl.innerHTML=glg.map(cohortCard).join('');
+  if(alvEl)alvEl.innerHTML=alv.map(cohortCard).join('');
+
+  // Forecast
+  renderForecast(COHORT.filter(function(c){return c.lob==='GUARDIAN';}).sort(function(a,b){return a.payable_month.localeCompare(b.payable_month);}).slice(-5),0.076,'glgFc',2493,73.0);
+  renderForecast(COHORT.filter(function(c){return c.lob==='ALLEVIATE';}).sort(function(a,b){return a.payable_month.localeCompare(b.payable_month);}).slice(-5),0.085,'alvFc',2805,70.9);
+
+  renderChart();
+  renderDebtProj();
+}
+
+function renderDebtProj() {
+  var earlyGLG = COHORT.find(function(c){return c.lob==='GUARDIAN'&&c.incomplete&&c.fails===0&&c.cur_ret>90;});
+  var earlyALV = COHORT.find(function(c){return c.lob==='ALLEVIATE'&&c.incomplete&&c.fails===0&&c.cur_ret>90;});
+  var banner = document.getElementById('debtProjBanner');
+  var inner = document.getElementById('debtProjInner');
+  if (!banner || !inner || (!earlyGLG && !earlyALV)) return;
+
+  var dE=16, dR=15;
+  var gClr = earlyGLG ? earlyGLG.passes : 0;
+  var aClr = earlyALV ? earlyALV.passes : 0;
+  var gProj = gClr + Math.round(gClr/dE*dR);
+  var aProj = aClr + Math.round(aClr/dE*dR);
+  var gDebt = gProj * 30555;
+  var aDebt = aProj * 32223;
+  var total = gDebt + aDebt;
+  var ml = earlyGLG ? earlyGLG.month_label : 'Current Month';
+
+  function fmtB(n) {
+    if (n >= 1000000000) return '$' + (n/1000000000).toFixed(2) + 'B';
+    if (n >= 1000000) return '$' + (n/1000000).toFixed(1) + 'M';
+    return '$' + (n/1000).toFixed(0) + 'K';
+  }
+
+  banner.style.display = 'block';
+  inner.innerHTML =
+    '<div style="flex:1;padding-right:24px;border-right:1px solid var(--border)">' +
+      '<div style="font-size:10px;color:#4d8fff;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">GLG Debt Cleared</div>' +
+      '<div style="font-family:Barlow Condensed,sans-serif;font-size:30px;font-weight:700;color:#4d8fff;line-height:1">' + fmtB(gDebt) + '</div>' +
+      '<div style="font-size:11px;color:var(--text-dimmer);margin-top:5px">' + gProj.toLocaleString() + ' files &times; $30,555 avg debt</div>' +
+    '</div>' +
+    '<div style="flex:1;padding:0 24px;border-right:1px solid var(--border)">' +
+      '<div style="font-size:10px;color:#00d48a;text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">ALV Debt Cleared</div>' +
+      '<div style="font-family:Barlow Condensed,sans-serif;font-size:30px;font-weight:700;color:#00d48a;line-height:1">' + fmtB(aDebt) + '</div>' +
+      '<div style="font-size:11px;color:var(--text-dimmer);margin-top:5px">' + aProj.toLocaleString() + ' files &times; $32,223 avg debt</div>' +
+    '</div>' +
+    '<div style="flex:1;padding-left:24px">' +
+      '<div style="font-size:10px;color:var(--text-dim);text-transform:uppercase;letter-spacing:.8px;margin-bottom:6px">Total Debt Cleared</div>' +
+      '<div style="font-family:Barlow Condensed,sans-serif;font-size:36px;font-weight:800;line-height:1">' + fmtB(total) + '</div>' +
+      '<div style="font-size:11px;color:#00d48a;margin-top:5px">&#9679; ' + ml + ' combined projection</div>' +
+    '</div>';
+}
+
+function cohortCard(c){
+  var early=c.incomplete&&c.fails===0&&c.cur_ret>90;
+  var lob=c.lob==='GUARDIAN'?'GLG':'ALV';
+  var lobC=c.lob==='GUARDIAN'?'rgba(77,143,255,.15)':'rgba(0,212,138,.12)';
+  var lobTc=c.lob==='GUARDIAN'?'#4d8fff':'#00d48a';
+  var statusBadge=early?'<div style="display:inline-flex;align-items:center;gap:4px;background:rgba(34,211,238,.1);border:1px solid rgba(34,211,238,.2);border-radius:3px;padding:2px 7px;font-size:9px;color:#22d3ee;font-family:DM Mono,monospace">&#9679; IN PROGRESS &mdash; Cutoff Apr 10</div>':c.window_closed?'<div style="display:inline-flex;align-items:center;gap:4px;background:rgba(0,212,138,.12);border:1px solid rgba(0,212,138,.2);border-radius:3px;padding:2px 7px;font-size:9px;color:#00d48a;font-family:DM Mono,monospace">&#10003; FINAL &middot; Pay Report</div>':'<div style="display:inline-flex;align-items:center;gap:4px;background:rgba(77,143,255,.1);border:1px solid rgba(77,143,255,.2);border-radius:3px;padding:2px 7px;font-size:9px;color:#4d8fff;font-family:DM Mono,monospace">PROJECTED &middot; '+c.days_left+'d left</div>';
+  var borderC=early?'rgba(34,211,238,.25)':c.window_closed?'rgba(0,212,138,.2)':'#1e2d42';
+  var topC=early?'#22d3ee':c.window_closed?'#00d48a':retColor(c.cur_ret);
+  var body='';
+  if(early){
+    var avgDebt=c.lob==='GUARDIAN'?30555:32223;var rate=c.lob==='GUARDIAN'?0.076:0.085;
+    var dE=16,dR=15;
+    var proj=c.passes+Math.round(c.passes/dE*dR);
+    var comm=proj*avgDebt*rate;
+    body='<div style="display:flex;gap:8px;margin:8px 0">'+
+      '<div style="flex:1;background:#141a24;border-radius:6px;padding:8px 10px">'+
+        '<div style="font-size:9px;color:#4a5a72;font-family:DM Mono,monospace;text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px">Cleared (16d)</div>'+
+        '<div style="font-family:Barlow Condensed,sans-serif;font-size:22px;font-weight:700;color:#4d8fff">'+c.passes.toLocaleString()+'</div>'+
+        '<div style="font-size:9px;color:#4a5a72;font-family:DM Mono,monospace">'+(c.passes/dE).toFixed(1)+'/day pace</div>'+
+      '</div>'+
+      '<div style="flex:1;background:#141a24;border-radius:6px;padding:8px 10px">'+
+        '<div style="font-size:9px;color:#4a5a72;font-family:DM Mono,monospace;text-transform:uppercase;letter-spacing:.6px;margin-bottom:3px">+'+dR+'d Projected</div>'+
+        '<div style="font-family:Barlow Condensed,sans-serif;font-size:22px;font-weight:700;color:#8a9bb5">+'+Math.round(c.passes/dE*dR).toLocaleString()+'</div>'+
+        '<div style="font-size:9px;color:#4a5a72;font-family:DM Mono,monospace">'+(c.lob==='GUARDIAN'?73.0:70.9)+'% hist. clear</div>'+
+      '</div>'+
+    '</div>'+
+    '<div style="background:rgba(77,143,255,.07);border:1px solid rgba(77,143,255,.2);border-radius:6px;padding:10px 12px">'+
+      '<div style="font-size:9px;color:#4d8fff;text-transform:uppercase;letter-spacing:.8px;font-family:DM Mono,monospace;margin-bottom:3px">Projected Commission</div>'+
+      '<div style="font-family:Barlow Condensed,sans-serif;font-size:26px;font-weight:700">'+fmtM(comm)+'</div>'+
+      '<div style="font-size:9px;color:#4a5a72;margin-top:3px;font-family:DM Mono,monospace">'+proj.toLocaleString()+' proj. files &times; $'+cpf.toLocaleString()+'/file avg</div>'+
+    '</div>';
+  } else {
+    var rc=retColor(c.cur_ret);
+    var bp=Math.max(0,Math.min(100,(c.cur_ret-60)/40*100));
+    var adj=c.cur_adj;
+    var adjC=adj>0?'#00d48a':adj>=-2.5?'#f59e0b':'#ff3d5a';
+    body='<div style="font-family:Barlow Condensed,sans-serif;font-size:40px;font-weight:800;color:'+rc+';line-height:1">'+c.cur_ret.toFixed(1)+'%</div>'+
+      '<div style="height:4px;background:#1c2535;border-radius:2px;margin:8px 0 4px;overflow:hidden"><div style="width:'+bp+'%;height:100%;background:'+rc+'"></div></div>'+
+      '<div style="font-size:9px;color:#4a5a72;text-align:right;font-family:DM Mono,monospace;margin-bottom:8px">'+fmtM(c.est_commission)+' est. comm</div>'+
+      '<div style="display:flex;gap:8px;padding-top:8px;border-top:1px solid #1e2d42">'+
+        '<div style="flex:1"><div style="font-size:9px;color:#4a5a72;text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px">Files</div><div style="font-family:DM Mono,monospace;font-size:12px;font-weight:600">'+c.payable_files.toLocaleString()+'</div></div>'+
+        '<div style="flex:1"><div style="font-size:9px;color:#4a5a72;text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px">Passed</div><div style="font-family:DM Mono,monospace;font-size:12px;font-weight:600;color:#00d48a">'+c.passes.toLocaleString()+'</div></div>'+
+        '<div style="flex:1"><div style="font-size:9px;color:#4a5a72;text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px">Failed</div><div style="font-family:DM Mono,monospace;font-size:12px;font-weight:600;color:#ff3d5a">'+c.fails.toLocaleString()+'</div></div>'+
+        '<div style="flex:1"><div style="font-size:9px;color:#4a5a72;text-transform:uppercase;letter-spacing:.6px;margin-bottom:2px">Adj</div><div style="font-family:DM Mono,monospace;font-size:12px;font-weight:600;color:'+adjC+'">'+(adj>=0?'+':'')+adj+'%</div></div>'+
+      '</div>';
+  }
+  return '<div class="cohort-card" style="border:1px solid '+borderC+';border-top:2px solid '+topC+'">'+
+    '<div style="display:flex;justify-content:space-between;align-items:flex-start;margin-bottom:8px">'+
+      '<div>'+
+        '<div style="font-family:Barlow Condensed,sans-serif;font-size:17px;font-weight:700">'+c.month_label+'</div>'+
+        '<div style="margin-top:4px">'+statusBadge+'</div>'+
+      '</div>'+
+      '<span style="font-size:9px;font-weight:600;padding:2px 7px;border-radius:3px;background:'+lobC+';color:'+lobTc+'">'+lob+'</span>'+
+    '</div>'+
+    body+
+    '<div style="font-size:9px;color:#4a5a72;margin-top:8px;padding-top:7px;border-top:1px solid #1e2d42;font-family:DM Mono,monospace">'+c.source+'</div>'+
+  '</div>';
+}
+
+function renderForecast(cohorts,rate,elId,cpf,histRate){
+  var el=document.getElementById(elId);
+  if(!el)return;
+  el.innerHTML=cohorts.map(function(c){
+    var early=c.incomplete&&c.fails===0&&c.cur_ret>90;
+    if(early){
+      var dE=16,dR=15;
+      var proj=c.passes+Math.round(c.passes/dE*dR);
+      var comm=proj*avgDebt*rate;
+      return '<div class="fc-row" style="border-left:2px solid #22d3ee;padding-left:10px">'+
+        '<div>'+
+          '<div class="fc-month">'+c.month_label+' <span style="font-size:9px;color:#22d3ee">&#9679; IN PROGRESS</span></div>'+
+          '<div class="fc-sub">'+c.passes.toLocaleString()+' cleared &divide; '+dE+'d = '+(c.passes/dE).toFixed(1)+'/day &times; '+dR+'d remaining</div>'+
+          '<div class="fc-sub" style="color:#4a5a72">'+proj.toLocaleString()+' proj. files &times; $'+cpf.toLocaleString()+'/file ('+histRate+'% hist. rate)</div>'+
+        '</div>'+
+        '<div class="fc-vals">'+
+          '<div class="fc-ret" style="color:#22d3ee;font-size:13px">N/A</div>'+
+          '<div class="fc-comm">'+fmtM(comm)+'</div>'+
+        '</div>'+
+      '</div>';
+    }
+    var rc=retColor(c.cur_ret);
+    var tiers=[{r:85,l:'+5% Bonus',c:'#00d48a'},{r:82.5,l:'+2.5% Bonus',c:'#6ee7b7'},{r:80,l:'0% Neutral',c:'#8a9bb5'},{r:77.5,l:'-2.5%',c:'#f59e0b'},{r:70,l:'-5%',c:'#fb923c'},{r:65,l:'-10%',c:'#ff3d5a'},{r:0,l:'-12%',c:'#f43f5e'}];
+    var next=tiers.find(function(t){return c.cur_ret<t.r;});
+    var nextStr=next?'<span style="color:'+next.c+';font-size:10px">'+(next.r-c.cur_ret).toFixed(1)+'% to '+next.l+'</span>':'<span style="color:#00d48a;font-size:10px">&#10003; In bonus tier</span>';
+    return '<div class="fc-row">'+
+      '<div>'+
+        '<div class="fc-month">'+c.month_label+' '+(c.window_closed?'<span style="font-size:9px;color:#00d48a">&#10003; FINAL</span>':'<span style="font-size:9px;color:#4d8fff">&#9679; OPEN</span>')+'</div>'+
+        '<div class="fc-sub">'+c.payable_files.toLocaleString()+' files &middot; '+(c.window_closed?'closed':c.days_left+'d left')+'</div>'+
+      '</div>'+
+      '<div class="fc-vals">'+
+        '<div class="fc-ret" style="color:'+rc+'">'+c.cur_ret.toFixed(1)+'%</div>'+
+        '<div class="fc-comm">'+fmtM(c.est_commission)+' '+nextStr+'</div>'+
+      '</div>'+
+    '</div>';
+  }).join('');
+}
+
+// ===== CHART =====
+var _chart=null;
+function renderChart(){
+  var ctx=document.getElementById('monthlyChart');
+  if(!ctx)return;
+  if(_chart)_chart.destroy();
+  var months=[...new Set(MONTHLY.map(function(m){return m.month_label;}))];
+  var glgD=months.map(function(ml){var r=MONTHLY.find(function(m){return m.month_label===ml&&m.lob==='GUARDIAN';});return r?r.files:0;});
+  var alvD=months.map(function(ml){var r=MONTHLY.find(function(m){return m.month_label===ml&&m.lob==='ALLEVIATE';});return r?r.files:0;});
+  _chart=new Chart(ctx,{type:'bar',data:{labels:months.map(function(m){return m.replace(' 20',"'");}),datasets:[{label:'Guardian',data:glgD,backgroundColor:'rgba(77,143,255,.7)',borderRadius:3},{label:'Alleviate',data:alvD,backgroundColor:'rgba(0,212,138,.65)',borderRadius:3}]},options:{responsive:true,maintainAspectRatio:false,plugins:{legend:{display:false},tooltip:{backgroundColor:'#1c2535',borderColor:'#243447',borderWidth:1,titleColor:'#e8edf5',bodyColor:'#8a9bb5'}},scales:{x:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#4a5a72',font:{size:10}}},y:{grid:{color:'rgba(255,255,255,.04)'},ticks:{color:'#4a5a72',font:{size:10}}}}}});
+}
+
+// ===== REPS =====
+function fReps(){
+  var q=document.getElementById('repQ').value.toLowerCase();
+  var lob=document.getElementById('repLob').value;
+  var team=document.getElementById('repTeam').value;
+  var sort=document.getElementById('repSort').value;
+  var d=REPS.filter(function(r){
+    if(q&&!r.rep.toLowerCase().includes(q))return false;
+    if(lob==='GUARDIAN'&&!r.guardian_files)return false;
+    if(lob==='ALLEVIATE'&&!r.alleviate_files)return false;
+    if(team!=='ALL'&&REP_TEAM[r.rep]!==team)return false;
+    return true;
+  });
+  if(sort==='worst')d.sort(function(a,b){return a.overall_ret-b.overall_ret;});
+  else if(sort==='best')d.sort(function(a,b){return b.overall_ret-a.overall_ret;});
+  else if(sort==='files')d.sort(function(a,b){return b.total_files-a.total_files;});
+  else if(sort==='commission')d.sort(function(a,b){return b.commission-a.commission;});
+  else d.sort(function(a,b){return a.rep.localeCompare(b.rep);});
+  return d;
+}
+function renderReps(){
+  var d=fReps(),st=rpg*RPG,sl=d.slice(st,st+RPG);
+  document.getElementById('repCount').textContent=d.length.toLocaleString()+' reps';
+  document.getElementById('repPgInfo').textContent=(st+1)+'-'+Math.min(st+RPG,d.length)+' of '+d.length;
+  document.getElementById('repPrev').disabled=rpg===0;
+  document.getElementById('repNext').disabled=st+RPG>=d.length;
+  document.getElementById('repBody').innerHTML=sl.map(function(r){
+    var rc=retColor(r.overall_ret);
+    var bw=Math.max(0,Math.min(100,(r.overall_ret-60)/40*100));
+    var team=REP_TEAM[r.rep]||'Unassigned';
+    var adjC=r.overall_adj>0?'#00d48a':r.overall_adj>=-2.5?'#f59e0b':'#ff3d5a';
+    return '<tr>'+
+      '<td style="font-weight:600;white-space:nowrap">'+r.rep+'</td>'+
+      '<td style="font-size:10px;color:#8a9bb5">'+team+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+r.total_files+'</td>'+
+      '<td style="font-family:DM Mono,monospace;color:#00d48a">'+r.total_passes+'</td>'+
+      '<td style="font-family:DM Mono,monospace;color:#ff3d5a">'+r.total_fails+'</td>'+
+      '<td><div style="display:flex;align-items:center;gap:8px"><span style="font-family:DM Mono,monospace;color:'+rc+';font-weight:600;width:46px">'+fmtPct(r.overall_ret)+'</span><div style="flex:1;height:5px;background:#1c2535;border-radius:3px;min-width:60px"><div style="width:'+bw+'%;height:100%;background:'+rc+';border-radius:3px"></div></div></div></td>'+
+      '<td style="font-family:DM Mono,monospace;color:'+adjC+'">'+(r.overall_adj>=0?'+':'')+r.overall_adj+'%</td>'+
+      '<td style="font-family:DM Mono,monospace;color:'+(r.guardian_ret!=null?retColor(r.guardian_ret):'#4a5a72')+'">'+(r.guardian_ret!=null?fmtPct(r.guardian_ret):'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace;color:'+(r.alleviate_ret!=null?retColor(r.alleviate_ret):'#4a5a72')+'">'+(r.alleviate_ret!=null?fmtPct(r.alleviate_ret):'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-weight:600">'+fmtM(r.commission)+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+// ===== AT-RISK =====
+function fRisk(){
+  var q=document.getElementById('riskQ').value.toLowerCase();
+  var lob=document.getElementById('riskLob').value;
+  var lbm=document.getElementById('riskLBMonth').value;
+  var team=document.getElementById('riskTeam').value;
+  var rank=document.getElementById('riskRank').value;
+  var sort=document.getElementById('riskSort').value;
+  var d=_AR.filter(function(r){
+    if(lob!=='ALL'&&r.lob!==lob)return false;
+    if(lbm!=='ALL'&&r.cohort_month!==lbm)return false;
+    if(team!=='ALL'&&REP_TEAM[r.rep]!==team)return false;
+    var g=calcRank(r.score);
+    if(rank!=='ALL'){
+      var fMap={'A+':['A+'],'A':['A'],'A-':['A-'],'B+':['B+'],'B':['B'],'B-':['B-'],'C+':['C+'],'C':['C'],'C-':['C-'],'D+':['D+','D','D-','F+','F','F-'],'F':['F+','F','F-']};
+      if(fMap[rank]&&!fMap[rank].includes(g))return false;
+    }
+    if(q){
+      var digits=q.replace(/[^0-9]/g,'');
+      if(digits.length>=4&&r.phone&&r.phone.replace(/[^0-9]/g,'').includes(digits))return true;
+      return r.name.toLowerCase().includes(q)||r.rep.toLowerCase().includes(q);
+    }
+    return true;
+  });
+  if(sort==='score_desc')d.sort(function(a,b){return b.score-a.score;});
+  else if(sort==='score_asc')d.sort(function(a,b){return a.score-b.score;});
+  else if(sort==='pmts')d.sort(function(a,b){return a.needed-b.needed;});
+  else if(sort==='debt')d.sort(function(a,b){return b.debt-a.debt;});
+  else d.sort(function(a,b){return(b.fp_cleared||'').localeCompare(a.fp_cleared||'');});
+  return d;
+}
+function renderRisk(){
+  var d=fRisk(),st=rkpg*RKPG,sl=d.slice(st,st+RKPG);
+  document.getElementById('riskCount').innerHTML=d.length.toLocaleString()+' clients';
+  document.getElementById('riskPgInfo').textContent=(st+1)+'-'+Math.min(st+RKPG,d.length)+' of '+d.length;
+  document.getElementById('riskPrev').disabled=rkpg===0;
+  document.getElementById('riskNext').disabled=st+RKPG>=d.length;
+  document.getElementById('riskBody').innerHTML=sl.map(function(r){
+    var g=calcRank(r.score);
+    var lobC=r.lob==='GUARDIAN'?'bg':'ba';
+    var team=REP_TEAM[r.rep]||'Unassigned';
+    var wC=r.in_window?'#00d48a':'#ff3d5a';
+    var pC=r.needed<=1?'#00d48a':r.needed<=2?'#f59e0b':'#ff3d5a';
+    var nC=r.nsf>2?'color:#ff3d5a':r.nsf>0?'color:#f59e0b':'';
+    return '<tr>'+
+      '<td><span class="'+rankCls(g)+'">'+g+'</span></td>'+
+      '<td style="font-weight:600;white-space:nowrap;max-width:160px;overflow:hidden;text-overflow:ellipsis">'+r.name+'</td>'+
+      '<td><span class="badge '+lobC+'">'+(r.lob==='GUARDIAN'?'GLG':'ALV')+'</span></td>'+
+      '<td><div style="font-size:11px">'+r.rep+'</div><div style="font-size:9px;color:#4a5a72">'+team+'</div></td>'+
+      '<td style="font-size:10px;color:#8a9bb5;font-family:DM Mono,monospace">'+(r.cohort_label||'—')+'</td>'+
+      '<td><span class="badge bk">'+r.freq+'</span></td>'+
+      '<td style="font-family:DM Mono,monospace;color:#00d48a">'+r.cleared+'/'+r.thresh+'</td>'+
+      '<td style="font-family:DM Mono,monospace;color:'+pC+';font-weight:600">'+r.needed+'</td>'+
+      '<td style="font-family:DM Mono,monospace;'+nC+'">'+r.nsf+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:11px;white-space:nowrap">'+(r.phone||'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.pmt?'$'+r.pmt.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}):'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.debt?'$'+r.debt.toLocaleString():'—')+'</td>'+
+      '<td style="font-size:10px;color:'+wC+';font-family:DM Mono,monospace">'+(r.in_window?(r.window_end||'Open'):'CLOSED')+'</td>'+
+      '<td style="font-size:10px;color:#8a9bb5;max-width:180px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">'+(r.notes||'')+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+// ===== CLIENT DB =====
+function dbStatusCls(s){if(s==='Active - At Risk')return'by';if(s==='Active - On Track')return'ba';if(s==='NSF')return'br';return'bk';}
+function fDB(){
+  var q=document.getElementById('dbQ').value.toLowerCase();
+  var lob=document.getElementById('dbLob').value;
+  var team=document.getElementById('dbTeam').value;
+  var status=document.getElementById('dbStatus').value;
+  var sort=document.getElementById('dbSort').value;
+  var d=_DB.filter(function(r){
+    if(lob!=='ALL'&&r.lob!==lob)return false;
+    if(status!=='ALL'&&r.status!==status)return false;
+    if(team!=='ALL'&&REP_TEAM[r.rep]!==team)return false;
+    if(q){
+      var digits=q.replace(/[^0-9]/g,'');
+      if(digits.length>=4&&r.phone&&r.phone.replace(/[^0-9]/g,'').includes(digits))return true;
+      if(r.id&&r.id.includes(q))return true;
+      return r.name.toLowerCase().includes(q)||r.rep.toLowerCase().includes(q);
+    }
+    return true;
+  });
+  if(sort==='name')d.sort(function(a,b){return a.name.localeCompare(b.name);});
+  else if(sort==='debt_desc')d.sort(function(a,b){return b.debt-a.debt;});
+  else if(sort==='cleared_desc')d.sort(function(a,b){return b.cleared-a.cleared;});
+  else if(sort==='recent')d.sort(function(a,b){return(b.fp_cleared||'').localeCompare(a.fp_cleared||'');});
+  return d;
+}
+function pmtDots(r){
+  var out='<div style="display:flex;gap:3px">';
+  for(var i=0;i<Math.min(r.thresh||3,6);i++){
+    var cleared=r.p&&r.p[i];
+    out+='<div style="width:8px;height:8px;border-radius:50%;background:'+(cleared?'#00d48a':'#1c2535')+';border:1px solid '+(cleared?'#00d48a':'#243447')+'" title="'+(cleared||'not cleared')+'"></div>';
+  }
+  return out+'</div>';
+}
+function renderDB(){
+  var d=fDB(),st=dbpg*DBPG,sl=d.slice(st,st+DBPG);
+  document.getElementById('dbCount').textContent=d.length.toLocaleString()+' clients (3,000 loaded)';
+  document.getElementById('dbPgInfo').textContent=(st+1)+'-'+Math.min(st+DBPG,d.length)+' of '+d.length;
+  document.getElementById('dbPrev').disabled=dbpg===0;
+  document.getElementById('dbNext').disabled=st+DBPG>=d.length;
+  document.getElementById('dbBody').innerHTML=sl.map(function(r){
+    var nc=r.nsf>2?'color:#ff3d5a':r.nsf>0?'color:#f59e0b':'';
+    var team=REP_TEAM[r.rep]||'Unassigned';
+    var lobC=r.lob==='GUARDIAN'?'bg':'ba';
+    return '<tr>'+
+      '<td style="font-weight:600;white-space:nowrap">'+r.name+'</td>'+
+      '<td style="font-family:DM Mono,monospace;font-size:10px;color:#4a5a72">'+r.id+'</td>'+
+      '<td><span class="badge '+lobC+'">'+(r.lob==='GUARDIAN'?'GLG':'ALV')+'</span></td>'+
+      '<td><div style="font-size:11px">'+r.rep+'</div><div style="font-size:9px;color:#4a5a72">'+team+'</div></td>'+
+      '<td><span class="badge '+dbStatusCls(r.status)+'">'+r.status+'</span></td>'+
+      '<td><span class="badge bk">'+r.freq+'</span></td>'+
+      '<td style="font-family:DM Mono,monospace;color:'+(r.cleared>=r.thresh?'#00d48a':r.cleared>0?'#f59e0b':'#4a5a72')+'">'+r.cleared+'/'+r.thresh+'</td>'+
+      '<td>'+pmtDots(r)+'</td>'+
+      '<td style="font-family:DM Mono,monospace;'+nc+'">'+r.nsf+'</td>'+
+      '<td style="font-family:DM Mono,monospace;white-space:nowrap">'+(r.phone||'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.pmt?'$'+r.pmt.toLocaleString(undefined,{minimumFractionDigits:2,maximumFractionDigits:2}):'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.debt?'$'+r.debt.toLocaleString():'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.fp_cleared||'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.next_pmt||'—')+'</td>'+
+      '<td style="font-family:DM Mono,monospace">'+(r.enrolled||'—')+'</td>'+
+    '</tr>';
+  }).join('');
+}
+
+document.addEventListener('DOMContentLoaded',function(){
+  initSelects();
+  renderOverview();
+});
+
+</script>
+</body>
+</html>

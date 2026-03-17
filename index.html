@@ -809,7 +809,7 @@ function renderForecast(cohorts,rate,elId,cpf,histRate){
         '<div>'+
           '<div class="fc-month">'+c.month_label+' <span style="font-size:9px;color:#22d3ee">&#9679; IN PROGRESS</span></div>'+
           '<div class="fc-sub">'+c.passes.toLocaleString()+' cleared &divide; '+dE+'d = '+(c.passes/dE).toFixed(1)+'/day &times; '+dR+'d remaining</div>'+
-          '<div class="fc-sub" style="color:#4a5a72">'+proj.toLocaleString()+' proj. files &times; $'+cpf.toLocaleString()+'/file ('+histRate+'% hist. rate)</div>'+
+          '<div class="fc-sub" style="color:#4a5a72">'+proj.toLocaleString()+' proj. files &times; $'+commPerFileVal.toLocaleString()+'/file ('+histRate+'</div>'+
         '</div>'+
         '<div class="fc-vals">'+
           '<div class="fc-ret" style="color:#22d3ee;font-size:13px">N/A</div>'+
@@ -1026,7 +1026,7 @@ document.addEventListener('DOMContentLoaded',function(){
 
 </script>
 </body>
-</html>+(c.lob==='GUARDIAN'?'30,555':'32,223')+' avg debt &times; '+(c.lob==='GUARDIAN'?'7.6':'8.5')+'%'% hist. rate)</div>'+
+</html>+(c.lob==='GUARDIAN'?'30,555':'32,223')+' avg debt &times; '+(c.lob==='GUARDIAN'?'7.6':'8.5')+'%'</div>'+
         '</div>'+
         '<div class="fc-vals">'+
           '<div class="fc-ret" style="color:#22d3ee;font-size:13px">N/A</div>'+
@@ -1286,7 +1286,7 @@ function renderForecast(cohorts,rate,elId,cpf,histRate){
         '<div>'+
           '<div class="fc-month">'+c.month_label+' <span style="font-size:9px;color:#22d3ee">&#9679; IN PROGRESS</span></div>'+
           '<div class="fc-sub">'+c.passes.toLocaleString()+' cleared &divide; '+dE+'d = '+(c.passes/dE).toFixed(1)+'/day &times; '+dR+'d remaining</div>'+
-          '<div class="fc-sub" style="color:#4a5a72">'+proj.toLocaleString()+' proj. files &times; $'+cpf.toLocaleString()+'/file ('+histRate+'% hist. rate)</div>'+
+          '<div class="fc-sub" style="color:#4a5a72">'+proj.toLocaleString()+' proj. files &times; $'+commPerFileVal.toLocaleString()+'/file ('+histRate+'</div>'+
         '</div>'+
         '<div class="fc-vals">'+
           '<div class="fc-ret" style="color:#22d3ee;font-size:13px">N/A</div>'+
